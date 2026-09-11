@@ -13,34 +13,34 @@ import yfinance as yf
 
 # 設置頁面配置
 st.set_page_config(
-    page_title="專業台股 AI 智慧分析系統",
+    page_title="全方位金融商品 AI 智慧分析系統",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.title("📈 專業台股 AI 智慧分析與三竹風看盤系統")
+st.title("📈 全方位金融商品 AI 智慧分析系統 (台股/美股/期貨/ETF/基金)")
 st.markdown("---")
 
-# 完整且正確的台股熱門對照字典
-TW_STOCK_NAMES = {
-    "6669": "緯穎 (Wiwynn)",
-    "2330": "台積電 (TSMC)",
-    "2303": "聯電 (UMC)",
-    "2317": "鴻海 (Foxconn)",
-    "6446": "藥華藥 (PharmaEssentia)",
-    "2454": "聯發科 (MediaTek)",
-    "2603": "長榮 (Evergreen)",
-    "2609": "陽明 (Yang Ming)",
-    "2308": "台達電 (Delta)",
-    "2881": "富邦金 (Fubon)",
-    "2882": "國泰金 (Cathay)",
-    "2891": "中信金 (CTBC)",
-    "2002": "中鋼 (China Steel)",
-    "1301": "台塑 (Formosa)",
-    "2408": "南亞科 (Nanya Tech)",
-    "0050": "元大台灣50 (ETF)",
-    "0056": "元大高股息 (ETF)",
+# 完整涵蓋台股熱門股票、ETF、期貨與美股對照字典
+GLOBAL_ASSET_NAMES = {
+    "6669.TW": "緯穎 (6669)",
+    "2330.TW": "台積電 (2330)",
+    "2303.TW": "聯電 (2303)",
+    "2317.TW": "鴻海 (2317)",
+    "6446.TW": "藥華藥 (6446)",
+    "2454.TW": "聯發科 (2454)",
+    "2603.TW": "長榮 (2603)",
+    "0050.TW": "元大台灣50 (ETF)",
+    "0056.TW": "元大高股息 (ETF)",
+    "00878.TW": "國泰永續高股息 (ETF)",
+    "AAPL": "蘋果公司 (Apple)",
+    "TSLA": "特斯拉 (Tesla)",
+    "NVDA": "輝達 (NVIDIA)",
+    "^TWII": "台灣加權指數",
+    "^GSPC": "標普500指數",
+    "^IXIC": "那斯達克指數",
+    "^SOX": "費城半導體指數",
 }
 
 # 側邊欄配置
@@ -48,33 +48,37 @@ with st.sidebar:
   st.header("⚙️ 商品搜尋與市場設定")
 
   user_input = st.text_input(
-      "輸入代碼 (例: 6669, 2330, 0050, AAPL)",
+      "輸入代碼 (例: 6669, 2330, 0050, AAPL, ^TWII)",
       value="6669",
       placeholder="輸入代碼",
   )
 
-  raw_input = user_input.strip().upper()
+  # 智慧代碼解析邏輯
+  raw_input = user_input.strip()
   if "." in raw_input or "^" in raw_input:
-    symbol = raw_input
-    clean_code = raw_input.split(".")[0]
+    symbol = raw_input.upper()
   else:
     digits = "".join(filter(str.isdigit, raw_input))
     if len(digits) == 4:
       symbol = digits + ".TW"
-      clean_code = digits
     elif len(digits) == 5:
       symbol = digits + ".TWO"
-      clean_code = digits
     else:
-      symbol = raw_input
-      clean_code = raw_input
+      symbol = raw_input.upper()
 
-  company_name = TW_STOCK_NAMES.get(clean_code, f"金融商品 ({symbol})")
+  # 取得精確名稱
+  comp_name = GLOBAL_ASSET_NAMES.get(symbol, f"金融商品 ({symbol})")
 
   time_range = st.selectbox(
-      "選擇歷史走勢區間", ["1個月", "3個月", "6個月", "1年"]
+      "選擇歷史走勢區間", ["1個月", "3個月", "6個月", "1年", "2年"]
   )
-  period_map = {"1個月": "1mo", "3個月": "3mo", "6個月": "6mo", "1年": "1y"}
+  period_map = {
+      "1個月": "1mo",
+      "3個月": "3mo",
+      "6個月": "6mo",
+      "1年": "1y",
+      "2年": "2y",
+  }
   period = period_map[time_range]
 
   st.markdown("---")
@@ -99,7 +103,7 @@ with st.sidebar:
 # 主程式邏輯
 if symbol:
   try:
-    with st.spinner(f"正在載入 {company_name} ({symbol}) 最新行情..."):
+    with st.spinner(f"正在載入 {comp_name} ({symbol}) 最新行情..."):
       stock_data = yf.download(
           symbol, period=period, interval="1d", progress=False
       )
@@ -117,20 +121,21 @@ if symbol:
           stock_data[col] = pd.to_numeric(stock_data[col], errors="coerce")
       stock_data = stock_data.dropna(subset=["Close"])
 
+      # 強制鎖定最新成交價與前一日收盤價
       current_price = float(stock_data["Close"].iloc[-1])
       prev_close = float(stock_data["Close"].iloc[-2])
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
 
-      st.subheader(f"📌 目前檢視標的：{company_name} (`{symbol}`)")
+      st.subheader(f"📌 目前檢視標的：{comp_name} (`{symbol}`)")
 
+      # 即時行情報價面板（確保顯示最新價）
       c1, c2, c3, c4 = st.columns(4)
       c1.metric("最新成交價", f"${current_price:.2f}", f"{chg:+.2f} ({chg_pct:+.2f}%)")
       c2.metric("今日最高", f"${float(stock_data['High'].iloc[-1]):.2f}")
       c3.metric("今日最低", f"${float(stock_data['Low'].iloc[-1]):.2f}")
-      c4.metric(
-          "成交張數", f"{int(stock_data['Volume'].iloc[-1]/1000):,} 張"
-      )
+      vol_val = int(stock_data["Volume"].iloc[-1])
+      c4.metric("成交量", f"{vol_val:,} 股/張")
 
       st.markdown("---")
 
@@ -160,14 +165,15 @@ if symbol:
       stop_loss = current_price - atr * 1.0
       long_target = current_price * 1.12
 
-      # 明確的買賣訊號判定（RSI 超賣買進、超買賣出）
+      # 強制產生明顯的綠色買點與紅色賣點訊號
       stock_data["Action"] = "Hold"
-      stock_data.loc[stock_data["RSI"] < 42, "Action"] = "Buy"
-      stock_data.loc[stock_data["RSI"] > 65, "Action"] = "Sell"
+      stock_data.loc[stock_data["RSI"] < 45, "Action"] = "Buy"
+      stock_data.loc[stock_data["RSI"] > 60, "Action"] = "Sell"
 
       df_buy = stock_data[stock_data["Action"] == "Buy"]
       df_sell = stock_data[stock_data["Action"] == "Sell"]
 
+      # 分頁介面
       tab1, tab2, tab3, tab4 = st.tabs(
           ["📊 三竹風買賣訊號", "📈 加粗均線與指標", "🎯 當沖/目標價規劃", "📰 相關財經資訊"]
       )
@@ -206,7 +212,7 @@ if symbol:
                 )
             )
           fig.update_layout(
-              title=f"{company_name} 歷史買賣點決策對照",
+              title=f"{comp_name} 歷史買賣點決策對照",
               xaxis_title="日期",
               yaxis_title="價格 (NT$)",
               height=500,
@@ -300,4 +306,4 @@ if symbol:
   except Exception as e:
     st.error(f"❌ 系統錯誤: {str(e)}")
 else:
-  st.info("👈 請於左側邊欄輸入股票或商品代碼開始分析。")
+  st.info("👈 請於左側邊欄輸入任何金融商品代碼開始分析。")
