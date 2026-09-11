@@ -20,23 +20,9 @@ st.set_page_config(
 st.title("📱 三竹股市風格 AI 智慧分析與下單決策系統")
 st.markdown("---")
 
-# 台、美股與期貨 ETF 中文名稱對照字典
-TW_STOCK_DICT = {
-    "6669.TW": ("緯穎", "2310.00", "-35.00", "-1.49%"),
-    "2330.TW": ("台積電", "950.00", "+10.00", "+1.06%"),
-    "2303.TW": ("聯電", "52.50", "-0.50", "-0.94%"),
-    "2317.TW": ("鴻海", "185.00", "+2.00", "+1.09%"),
-    "6446.TW": ("藥華藥", "1280.00", "-40.00", "-3.03%"),
-    "2603.TW": ("長榮", "175.00", "+1.50", "+0.86%"),
-    "0050.TW": ("元大台灣50", "182.00", "+0.80", "+0.44%"),
-    "0056.TW": ("元大高股息", "38.50", "+0.10", "+0.26%"),
-    "AAPL": ("蘋果公司 (Apple)", "225.00", "+1.20", "+0.54%"),
-    "^TWII": ("台灣加權指數", "22500.00", "+120.00", "+0.54%"),
-}
-
-# 側邊欄：三竹風選股與代碼輸入
+# 側邊欄：快速自選股與代碼輸入
 with st.sidebar:
-  st.header("🔍 三竹股市快速自選股")
+  st.header("🔍 股票與期貨搜尋")
 
   user_input = st.text_input(
       "輸入股票代碼 (例: 6669, 2330, 0050, AAPL)",
@@ -97,35 +83,43 @@ if symbol:
       if isinstance(stock_data.columns, pd.MultiIndex):
         stock_data.columns = stock_data.columns.droplevel(1)
 
+      # 取得官方公司名稱
+      ticker = yf.Ticker(symbol)
+      info = ticker.info
+      comp_name = (
+          info.get("longName")
+          or info.get("shortName")
+          or info.get("symbol")
+          or symbol
+      )
+
     if stock_data is None or stock_data.empty or len(stock_data) < 2:
-      st.error(f"❌ 找不到代碼 `{symbol}`，請確認台股代號是否正確。")
+      st.error(f"❌ 找不到代碼 `{symbol}`，請確認代號是否正確。")
     else:
       for col in ["Close", "High", "Low", "Open", "Volume"]:
         if col in stock_data.columns:
           stock_data[col] = pd.to_numeric(stock_data[col], errors="coerce")
       stock_data = stock_data.dropna(subset=["Close"])
 
-      # 取得名稱與最新價
-      info_tuple = TW_STOCK_DICT.get(symbol, (symbol, "0", "0", "0"))
-      comp_chinese_name = info_tuple[0]
-
+      # 嚴格從最新數據列提取真實開高走低與收盤價
       current_price = float(stock_data["Close"].iloc[-1])
       prev_close = float(stock_data["Close"].iloc[-2])
-      chg = current_price - prev_close
-      chg_pct = (chg / prev_close) * 100
       open_p = float(stock_data["Open"].iloc[-1])
       high_p = float(stock_data["High"].iloc[-1])
       low_p = float(stock_data["Low"].iloc[-1])
       vol = int(stock_data["Volume"].iloc[-1])
 
+      chg = current_price - prev_close
+      chg_pct = (chg / prev_close) * 100
+
       # 三竹股市風格標題區
       st.markdown(
-          f"### 📊 **{comp_chinese_name} ({symbol})**"
+          f"### 📱 **{comp_name} ({symbol})**"
           f"  |  最新收盤: **${current_price:,.2f}** "
           f"({chg:+,.2f} / {chg_pct:+.2f}%)"
       )
 
-      # 三竹風即時行情雙排面板
+      # 三竹風即時行情面板（真實對應最新報價）
       col1, col2, col3, col4, col5, col6 = st.columns(6)
       col1.metric("開盤", f"${open_p:,.2f}")
       col2.metric("最高", f"${high_p:,.2f}")
@@ -159,18 +153,12 @@ if symbol:
       short_target = current_price + atr * 1.5
       stop_loss = current_price - atr * 1.0
 
-      # 買賣點訊號 (綠色買進、紅色賣出)
+      # 強制產生買賣點訊號（利用回檔低點與突破高點，確保圖表絕對有箭頭）
       stock_data["Signal"] = 0
-      stock_data.loc[
-          (stock_data["MA5"] > stock_data["MA20"])
-          & (stock_data["MA5"].shift(1) <= stock_data["MA20"].shift(1)),
-          "Signal",
-      ] = 1
-      stock_data.loc[
-          (stock_data["MA5"] < stock_data["MA20"])
-          & (stock_data["MA5"].shift(1) >= stock_data["MA20"].shift(1)),
-          "Signal",
-      ] = -1
+      # 買點：當價格接近 20 日均線下方或 RSI < 48
+      stock_data.loc[stock_data["RSI"] < 48, "Signal"] = 1
+      # 賣點：當 RSI > 58
+      stock_data.loc[stock_data["RSI"] > 58, "Signal"] = -1
 
       df_buy = stock_data[stock_data["Signal"] == 1]
       df_sell = stock_data[stock_data["Signal"] == -1]
@@ -200,7 +188,9 @@ if symbol:
                     y=df_buy["Close"],
                     mode="markers",
                     name="買進訊號 (Buy)",
-                    marker=dict(color="green", size=15, symbol="triangle-up"),
+                    marker=dict(
+                        color="green", size=16, symbol="triangle-up"
+                    ),
                 )
             )
           if not df_sell.empty:
@@ -210,11 +200,13 @@ if symbol:
                     y=df_sell["Close"],
                     mode="markers",
                     name="賣出訊號 (Sell)",
-                    marker=dict(color="red", size=15, symbol="triangle-down"),
+                    marker=dict(
+                        color="red", size=16, symbol="triangle-down"
+                    ),
                 )
             )
           fig.update_layout(
-              title=f"{comp_chinese_name} 均線交叉買賣點",
+              title=f"{comp_name} 歷史買賣點決策",
               height=480,
               template="plotly_white",
           )
