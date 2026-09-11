@@ -22,7 +22,7 @@ st.set_page_config(
 st.title("📈 專業台股 AI 智慧分析與三竹風看盤系統")
 st.markdown("---")
 
-# 擴充台灣上市櫃熱門公司對照字典（確保代號能精準對應中文名稱）
+# 完整台股熱門公司對照字典
 TW_STOCK_NAMES = {
     "2330": "台積電 (TSMC)",
     "2303": "聯電 (UMC)",
@@ -51,10 +51,11 @@ TW_STOCK_NAMES = {
 with st.sidebar:
   st.header("⚙️ 搜尋與市場設定")
 
+  # 讓使用者可以自由輸入查詢其他股票
   user_input = st.text_input(
-      "輸入台股代碼 (例: 6446, 2330, 2303)",
+      "輸入台股代碼 (例: 2330, 2303, 6446)",
       value="6446",
-      placeholder="輸入 4 碼代號",
+      placeholder="輸入代碼",
   )
 
   # 智慧代碼解析邏輯
@@ -69,10 +70,10 @@ with st.sidebar:
     elif len(clean_code) == 5:
       stock_symbol = clean_code + ".TWO"
     else:
-      stock_symbol = raw_input  # 支援美股
+      stock_symbol = raw_input
 
-  # 優先從內建字典抓取中文名稱，若無則顯示代碼
-  company_name = TW_STOCK_NAMES.get(clean_code, f"台股標的 {stock_symbol}")
+  # 穩定取得公司名稱
+  company_name = TW_STOCK_NAMES.get(clean_code, f"台股標的 ({stock_symbol})")
 
   time_range = st.selectbox(
       "選擇歷史走勢區間", ["1個月", "3個月", "6個月", "1年"]
@@ -102,7 +103,7 @@ with st.sidebar:
 # 主程式邏輯
 if stock_symbol:
   try:
-    with st.spinner(f"正在載入 {company_name} ({stock_symbol}) 歷史行情..."):
+    with st.spinner(f"正在載入 {company_name} 最新行情..."):
       stock_data = yf.download(
           stock_symbol, period=period, interval="1d", progress=False
       )
@@ -112,7 +113,7 @@ if stock_symbol:
 
     if stock_data is None or stock_data.empty or len(stock_data) < 2:
       st.error(
-          f"❌ 找不到代碼 `{stock_symbol}` 的資料！請確認輸入是否正確（台股上市請輸入 4 碼）。"
+          f"❌ 找不到代碼 `{stock_symbol}` 的資料！請檢查代碼是否正確（台股上市請輸入 4 碼）。"
       )
     else:
       for col in ["Close", "High", "Low", "Open", "Volume"]:
@@ -125,12 +126,11 @@ if stock_symbol:
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
 
-      # 顯示清晰的公司名稱與代碼
+      # 顯示精確的公司名稱與最新價
       st.subheader(f"📌 目前檢視標的：{company_name} (`{stock_symbol}`)")
 
-      # 三竹風極速報價面板
       c1, c2, c3, c4 = st.columns(4)
-      c1.metric("當前成交價", f"${current_price:.2f}", f"{chg:+.2f} ({chg_pct:+.2f}%)")
+      c1.metric("最新成交價", f"${current_price:.2f}", f"{chg:+.2f} ({chg_pct:+.2f}%)")
       c2.metric("今日最高", f"${float(stock_data['High'].iloc[-1]):.2f}")
       c3.metric("今日最低", f"${float(stock_data['Low'].iloc[-1]):.2f}")
       c4.metric(
@@ -139,16 +139,10 @@ if stock_symbol:
 
       st.markdown("---")
 
-      # 計算技術指標
+      # 計算均線與指標
       stock_data["MA5"] = stock_data["Close"].rolling(5).mean()
       stock_data["MA20"] = stock_data["Close"].rolling(20).mean()
       stock_data["MA60"] = stock_data["Close"].rolling(60).mean()
-
-      delta = stock_data["Close"].diff()
-      gain = delta.where(delta > 0, 0).rolling(window=14).mean()
-      loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-      rs = gain / loss
-      stock_data["RSI"] = 100 - (100 / (1 + rs))
 
       # 計算 ATR 與目標價
       tr = pd.concat(
@@ -165,32 +159,30 @@ if stock_symbol:
       stop_loss = current_price - atr * 1.0
       long_target = current_price * 1.12
 
-      # 產生明確的買賣訊號點
-      stock_data["Action"] = "Hold"
+      # 更直覺的買賣點判定（MA5 向上突破 MA20 為買點，向下突破為賣點）
+      stock_data["Signal"] = 0
       stock_data.loc[
           (stock_data["MA5"] > stock_data["MA20"])
-          & (stock_data["RSI"] < 48),
-          "Action",
-      ] = "Buy"
+          & (stock_data["MA5"].shift(1) <= stock_data["MA20"].shift(1)),
+          "Signal",
+      ] = 1
       stock_data.loc[
           (stock_data["MA5"] < stock_data["MA20"])
-          & (stock_data["RSI"] > 58),
-          "Action",
-      ] = "Sell"
+          & (stock_data["MA5"].shift(1) >= stock_data["MA20"].shift(1)),
+          "Signal",
+      ] = -1
 
-      df_buy = stock_data[stock_data["Action"] == "Buy"]
-      df_sell = stock_data[stock_data["Action"] == "Sell"]
+      df_buy = stock_data[stock_data["Signal"] == 1]
+      df_sell = stock_data[stock_data["Signal"] == -1]
 
-      # 分頁切換
       tab1, tab2, tab3, tab4 = st.tabs(
           ["📊 三竹風買賣訊號", "📈 加粗均線與指標", "🎯 當沖/目標價規劃", "📰 相關財經資訊"]
       )
 
       with tab1:
-        st.subheader("🎯 買點 (綠三角) 與 賣點 (紅倒三角) 標示圖")
+        st.subheader("🎯 黃金交叉買點 (綠三角) 與 死亡交叉賣點 (紅倒三角)")
         if plotly_available:
           fig = go.Figure()
-          # 價格主線 (加粗)
           fig.add_trace(
               go.Scatter(
                   x=stock_data.index,
@@ -200,30 +192,28 @@ if stock_symbol:
                   line=dict(color="#1f77b4", width=4),
               )
           )
-          # 買點標記
           if not df_buy.empty:
             fig.add_trace(
                 go.Scatter(
                     x=df_buy.index,
                     y=df_buy["Close"],
                     mode="markers",
-                    name="建議買進 (Buy)",
+                    name="黃金交叉買進 (Buy)",
                     marker=dict(color="green", size=16, symbol="triangle-up"),
                 )
             )
-          # 賣點標記
           if not df_sell.empty:
             fig.add_trace(
                 go.Scatter(
                     x=df_sell.index,
                     y=df_sell["Close"],
                     mode="markers",
-                    name="建議賣出 (Sell)",
+                    name="死亡交叉賣出 (Sell)",
                     marker=dict(color="red", size=16, symbol="triangle-down"),
                 )
             )
           fig.update_layout(
-              title=f"{company_name} 歷史買賣點決策對照",
+              title=f"{company_name} 均線交叉買賣點信號",
               xaxis_title="日期",
               yaxis_title="價格 (NT$)",
               height=500,
