@@ -81,7 +81,7 @@ with st.sidebar:
       "那斯達克": "^IXIC",
   }.items():
     try:
-      df_i = yf.download(sym, period="3d", progress=False)
+      df_i = yf.download(sym, period="3d", auto_adjust=False, progress=False)
       if isinstance(df_i.columns, pd.MultiIndex):
         df_i.columns = df_i.columns.droplevel(1)
       c_val = float(df_i["Close"].iloc[-1])
@@ -94,13 +94,14 @@ with st.sidebar:
 # 主程式
 if symbol:
   try:
-    with st.spinner(f"正在同步 Yahoo 股市即時行情 ({symbol})..."):
+    with st.spinner(f"正在同步 Yahoo 股市真實報價 ({symbol})..."):
       ticker = yf.Ticker(symbol)
+      # 強制關閉 auto_adjust，確保抓取未還原的真實成交價
       stock_data = ticker.history(period=period, auto_adjust=False)
 
       if stock_data is None or stock_data.empty:
         stock_data = yf.download(
-            symbol, period=period, interval="1d", progress=False
+            symbol, period=period, interval="1d", auto_adjust=False, progress=False
         )
         if isinstance(stock_data.columns, pd.MultiIndex):
           stock_data.columns = stock_data.columns.droplevel(1)
@@ -130,48 +131,25 @@ if symbol:
         except:
           comp_name = clean_sym
 
-      # 透過 fast_info 或最新日K強制對齊真實價格
-      try:
-        fi = ticker.fast_info
-        current_price = float(
-            fi.last_price
-            if fi.last_price
-            else stock_data["Close"].iloc[-1]
-        )
-        prev_close = float(
-            fi.previous_close
-            if fi.previous_close
-            else stock_data["Close"].iloc[-2]
-        )
-        open_p = float(
-            fi.open if fi.open else stock_data["Open"].iloc[-1]
-        )
-        high_p = float(
-            fi.day_high if fi.day_high else stock_data["High"].iloc[-1]
-        )
-        low_p = float(
-            fi.day_low if fi.day_low else stock_data["Low"].iloc[-1]
-        )
-        vol = int(fi.volume if fi.volume else stock_data["Volume"].iloc[-1])
-      except:
-        current_price = float(stock_data["Close"].iloc[-1])
-        prev_close = float(stock_data["Close"].iloc[-2])
-        open_p = float(stock_data["Open"].iloc[-1])
-        high_p = float(stock_data["High"].iloc[-1])
-        low_p = float(stock_data["Low"].iloc[-1])
-        vol = int(stock_data["Volume"].iloc[-1])
+      # 嚴格鎖定最新一筆真實未調整收盤價與高低開盤價
+      current_price = float(stock_data["Close"].iloc[-1])
+      prev_close = float(stock_data["Close"].iloc[-2])
+      open_p = float(stock_data["Open"].iloc[-1])
+      high_p = float(stock_data["High"].iloc[-1])
+      low_p = float(stock_data["Low"].iloc[-1])
+      vol = int(stock_data["Volume"].iloc[-1])
 
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
 
-      # 三竹股市風格標題區（強制顯示中文名稱與準確價格）
+      # 三竹股市風格標題區
       st.markdown(
           f"### 📱 **{comp_name} ({clean_sym})**"
           f"  |  最新收盤: **${current_price:,.2f}** "
           f"({chg:+,.2f} / {chg_pct:+.2f}%)"
       )
 
-      # 三竹風即時行情雙排面板
+      # 三竹風即時行情雙排面板（確保與 Yahoo 股市一致）
       col1, col2, col3, col4, col5, col6 = st.columns(6)
       col1.metric("開盤", f"${open_p:,.2f}")
       col2.metric("最高", f"${high_p:,.2f}")
@@ -205,20 +183,10 @@ if symbol:
       short_target = current_price + atr * 1.5
       stop_loss = current_price - atr * 1.0
 
-      # 強制均勻分佈買賣點信號（確保綠色買進與紅色賣出三角形同時出現）
+      # 買賣點訊號標記
       stock_data["Signal"] = 0
-      # 當收盤價小於 20 日線且 RSI < 50 設為買點
-      stock_data.loc[
-          (stock_data["Close"] < stock_data["MA20"])
-          & (stock_data["RSI"] < 50),
-          "Signal",
-      ] = 1
-      # 當收盤價大於 20 日線且 RSI > 55 設為賣點
-      stock_data.loc[
-          (stock_data["Close"] > stock_data["MA20"])
-          & (stock_data["RSI"] > 55),
-          "Signal",
-      ] = -1
+      stock_data.loc[stock_data["RSI"] < 45, "Signal"] = 1
+      stock_data.loc[stock_data["RSI"] > 60, "Signal"] = -1
 
       df_buy = stock_data[stock_data["Signal"] == 1]
       df_sell = stock_data[stock_data["Signal"] == -1]
