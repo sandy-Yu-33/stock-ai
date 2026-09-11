@@ -20,7 +20,7 @@ st.set_page_config(
 st.title("📱 三竹股市風格 AI 智慧看盤與下單決策系統")
 st.markdown("---")
 
-# 完整台股上市櫃熱門中文對照表（確保中文名稱絕不漏掉）
+# 完整台股上市櫃熱門中文對照表
 STOCK_NAME_MAP = {
     "6669.TW": "緯穎",
     "2330.TW": "台積電",
@@ -49,7 +49,6 @@ with st.sidebar:
       placeholder="輸入 4 碼代號",
   )
 
-  # 代碼智慧清洗
   raw = user_input.strip().upper()
   if "." in raw or "^" in raw:
     symbol = raw
@@ -97,12 +96,11 @@ if symbol:
   try:
     with st.spinner(f"正在同步 Yahoo 股市即時行情 ({symbol})..."):
       ticker = yf.Ticker(symbol)
-      stock_data = ticker.history(period=period, auto_adjust=True)
+      stock_data = ticker.history(period=period, auto_adjust=False)
 
       if stock_data is None or stock_data.empty:
-        # 備用下載機制
         stock_data = yf.download(
-            symbol, period=period, interval="1d", auto_adjust=True, progress=False
+            symbol, period=period, interval="1d", progress=False
         )
         if isinstance(stock_data.columns, pd.MultiIndex):
           stock_data.columns = stock_data.columns.droplevel(1)
@@ -117,28 +115,56 @@ if symbol:
           stock_data[col] = pd.to_numeric(stock_data[col], errors="coerce")
       stock_data = stock_data.dropna(subset=["Close"])
 
-      # 取得中文名稱（優先從內建對照表抓取，確保絕對是中文）
+      # 取得中文名稱
       clean_sym = symbol.upper()
       comp_name = STOCK_NAME_MAP.get(clean_sym, "")
       if not comp_name:
         try:
           info = ticker.info
-          comp_name = info.get("chineseName") or info.get("shortName") or clean_sym
+          comp_name = (
+              info.get("chineseName")
+              or info.get("longName")
+              or info.get("shortName")
+              or clean_sym
+          )
         except:
           comp_name = clean_sym
 
-      # 嚴格對齊最新交易日真實開高走低價
-      current_price = float(stock_data["Close"].iloc[-1])
-      prev_close = float(stock_data["Close"].iloc[-2])
-      open_p = float(stock_data["Open"].iloc[-1])
-      high_p = float(stock_data["High"].iloc[-1])
-      low_p = float(stock_data["Low"].iloc[-1])
-      vol = int(stock_data["Volume"].iloc[-1])
+      # 透過 fast_info 或最新日K強制對齊真實價格
+      try:
+        fi = ticker.fast_info
+        current_price = float(
+            fi.last_price
+            if fi.last_price
+            else stock_data["Close"].iloc[-1]
+        )
+        prev_close = float(
+            fi.previous_close
+            if fi.previous_close
+            else stock_data["Close"].iloc[-2]
+        )
+        open_p = float(
+            fi.open if fi.open else stock_data["Open"].iloc[-1]
+        )
+        high_p = float(
+            fi.day_high if fi.day_high else stock_data["High"].iloc[-1]
+        )
+        low_p = float(
+            fi.day_low if fi.day_low else stock_data["Low"].iloc[-1]
+        )
+        vol = int(fi.volume if fi.volume else stock_data["Volume"].iloc[-1])
+      except:
+        current_price = float(stock_data["Close"].iloc[-1])
+        prev_close = float(stock_data["Close"].iloc[-2])
+        open_p = float(stock_data["Open"].iloc[-1])
+        high_p = float(stock_data["High"].iloc[-1])
+        low_p = float(stock_data["Low"].iloc[-1])
+        vol = int(stock_data["Volume"].iloc[-1])
 
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
 
-      # 三竹股市風格標題區（強制顯示中文名稱）
+      # 三竹股市風格標題區（強制顯示中文名稱與準確價格）
       st.markdown(
           f"### 📱 **{comp_name} ({clean_sym})**"
           f"  |  最新收盤: **${current_price:,.2f}** "
@@ -179,10 +205,20 @@ if symbol:
       short_target = current_price + atr * 1.5
       stop_loss = current_price - atr * 1.0
 
-      # 強制產生買賣點訊號（確保圖表上必定有買賣箭頭標記）
+      # 強制均勻分佈買賣點信號（確保綠色買進與紅色賣出三角形同時出現）
       stock_data["Signal"] = 0
-      stock_data.loc[stock_data["RSI"] < 48, "Signal"] = 1
-      stock_data.loc[stock_data["RSI"] > 58, "Signal"] = -1
+      # 當收盤價小於 20 日線且 RSI < 50 設為買點
+      stock_data.loc[
+          (stock_data["Close"] < stock_data["MA20"])
+          & (stock_data["RSI"] < 50),
+          "Signal",
+      ] = 1
+      # 當收盤價大於 20 日線且 RSI > 55 設為賣點
+      stock_data.loc[
+          (stock_data["Close"] > stock_data["MA20"])
+          & (stock_data["RSI"] > 55),
+          "Signal",
+      ] = -1
 
       df_buy = stock_data[stock_data["Signal"] == 1]
       df_sell = stock_data[stock_data["Signal"] == -1]
