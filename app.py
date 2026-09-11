@@ -19,10 +19,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.title("📈 專業台股 AI 智慧分析與多功能看盤系統")
+st.title("📈 專業台股 AI 智慧分析與三竹風看盤系統")
 st.markdown("---")
 
-# 擴充台股熱門公司對照字典
+# 擴充台灣上市櫃熱門公司對照字典（確保代號能精準對應中文名稱）
 TW_STOCK_NAMES = {
     "2330": "台積電 (TSMC)",
     "2303": "聯電 (UMC)",
@@ -37,9 +37,14 @@ TW_STOCK_NAMES = {
     "2002": "中鋼 (China Steel)",
     "1301": "台塑 (Formosa)",
     "2408": "南亞科 (Nanya Tech)",
-    "2379": "瑞昱 (Realtek)",
+    "6446": "藥華藥 (PharmaEssentia)",
     "3037": "欣興 (Unimicron)",
+    "2379": "瑞昱 (Realtek)",
     "2615": "萬海 (Wan Hai)",
+    "3017": "奇鋐 (Asia Vital)",
+    "2383": "台光電 (EMC)",
+    "3661": "世芯-KY (Alchip)",
+    "3443": "創意 (GlobalUnichip)",
 }
 
 # 側邊欄配置
@@ -47,12 +52,12 @@ with st.sidebar:
   st.header("⚙️ 搜尋與市場設定")
 
   user_input = st.text_input(
-      "輸入股票代碼或名稱 (例: 2330, 2303, AAPL)",
-      value="2330",
-      placeholder="輸入代碼",
+      "輸入台股代碼 (例: 6446, 2330, 2303)",
+      value="6446",
+      placeholder="輸入 4 碼代號",
   )
 
-  # 智慧代碼解析邏輯：支援直接打代號或帶有 .TW/.TWO 的格式
+  # 智慧代碼解析邏輯
   raw_input = user_input.strip().upper()
   if "." in raw_input:
     stock_symbol = raw_input
@@ -64,9 +69,10 @@ with st.sidebar:
     elif len(clean_code) == 5:
       stock_symbol = clean_code + ".TWO"
     else:
-      stock_symbol = raw_input  # 支援美股如 AAPL, TSLA
+      stock_symbol = raw_input  # 支援美股
 
-  company_name = TW_STOCK_NAMES.get(clean_code, f"標的 {stock_symbol}")
+  # 優先從內建字典抓取中文名稱，若無則顯示代碼
+  company_name = TW_STOCK_NAMES.get(clean_code, f"台股標的 {stock_symbol}")
 
   time_range = st.selectbox(
       "選擇歷史走勢區間", ["1個月", "3個月", "6個月", "1年"]
@@ -75,7 +81,7 @@ with st.sidebar:
   period = period_map[time_range]
 
   st.markdown("---")
-  st.subheader("🌐 全球主要期貨與美股")
+  st.subheader("🌐 全球主要期貨與美股參考")
   for idx_name, sym in {
       "台指期參考": "^TWII",
       "標普 500": "^GSPC",
@@ -96,22 +102,19 @@ with st.sidebar:
 # 主程式邏輯
 if stock_symbol:
   try:
-    with st.spinner(f"正在載入 {company_name} ({stock_symbol}) 資料..."):
-      # 確保下載格式穩定
+    with st.spinner(f"正在載入 {company_name} ({stock_symbol}) 歷史行情..."):
       stock_data = yf.download(
           stock_symbol, period=period, interval="1d", progress=False
       )
 
-      # 處理 yfinance 新版 MultiIndex 欄位問題
       if isinstance(stock_data.columns, pd.MultiIndex):
         stock_data.columns = stock_data.columns.droplevel(1)
 
     if stock_data is None or stock_data.empty or len(stock_data) < 2:
       st.error(
-          f"❌ 找不到代碼 `{stock_symbol}` 的資料！請檢查代碼是否正確（台股上市請輸入 4 碼，如 2303；美股請輸入英文代號）。"
+          f"❌ 找不到代碼 `{stock_symbol}` 的資料！請確認輸入是否正確（台股上市請輸入 4 碼）。"
       )
     else:
-      # 確保數值型態正確
       for col in ["Close", "High", "Low", "Open", "Volume"]:
         if col in stock_data.columns:
           stock_data[col] = pd.to_numeric(stock_data[col], errors="coerce")
@@ -122,9 +125,10 @@ if stock_symbol:
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
 
+      # 顯示清晰的公司名稱與代碼
       st.subheader(f"📌 目前檢視標的：{company_name} (`{stock_symbol}`)")
 
-      # 報價面板
+      # 三竹風極速報價面板
       c1, c2, c3, c4 = st.columns(4)
       c1.metric("當前成交價", f"${current_price:.2f}", f"{chg:+.2f} ({chg_pct:+.2f}%)")
       c2.metric("今日最高", f"${float(stock_data['High'].iloc[-1]):.2f}")
@@ -161,16 +165,16 @@ if stock_symbol:
       stop_loss = current_price - atr * 1.0
       long_target = current_price * 1.12
 
-      # 產生買賣訊號點
+      # 產生明確的買賣訊號點
       stock_data["Action"] = "Hold"
       stock_data.loc[
           (stock_data["MA5"] > stock_data["MA20"])
-          & (stock_data["RSI"] < 45),
+          & (stock_data["RSI"] < 48),
           "Action",
       ] = "Buy"
       stock_data.loc[
           (stock_data["MA5"] < stock_data["MA20"])
-          & (stock_data["RSI"] > 60),
+          & (stock_data["RSI"] > 58),
           "Action",
       ] = "Sell"
 
@@ -186,15 +190,17 @@ if stock_symbol:
         st.subheader("🎯 買點 (綠三角) 與 賣點 (紅倒三角) 標示圖")
         if plotly_available:
           fig = go.Figure()
+          # 價格主線 (加粗)
           fig.add_trace(
               go.Scatter(
                   x=stock_data.index,
                   y=stock_data["Close"],
                   mode="lines",
                   name="收盤價",
-                  line=dict(color="#1f77b4", width=3.5),
+                  line=dict(color="#1f77b4", width=4),
               )
           )
+          # 買點標記
           if not df_buy.empty:
             fig.add_trace(
                 go.Scatter(
@@ -202,9 +208,10 @@ if stock_symbol:
                     y=df_buy["Close"],
                     mode="markers",
                     name="建議買進 (Buy)",
-                    marker=dict(color="green", size=14, symbol="triangle-up"),
+                    marker=dict(color="green", size=16, symbol="triangle-up"),
                 )
             )
+          # 賣點標記
           if not df_sell.empty:
             fig.add_trace(
                 go.Scatter(
@@ -212,20 +219,20 @@ if stock_symbol:
                     y=df_sell["Close"],
                     mode="markers",
                     name="建議賣出 (Sell)",
-                    marker=dict(color="red", size=14, symbol="triangle-down"),
+                    marker=dict(color="red", size=16, symbol="triangle-down"),
                 )
             )
           fig.update_layout(
-              title=f"{company_name} 歷史買賣點決策",
+              title=f"{company_name} 歷史買賣點決策對照",
               xaxis_title="日期",
-              yaxis_title="價格",
+              yaxis_title="價格 (NT$)",
               height=500,
               template="plotly_white",
           )
           st.plotly_chart(fig, use_container_width=True)
 
       with tab2:
-        st.subheader("📈 清晰多週期均線 (MA5, MA20, MA60)")
+        st.subheader("📈 三竹風格多週期均線 (MA5, MA20, MA60)")
         if plotly_available:
           fig2 = go.Figure()
           fig2.add_trace(
@@ -234,7 +241,7 @@ if stock_symbol:
                   y=stock_data["Close"],
                   mode="lines",
                   name="收盤價",
-                  line=dict(color="black", width=3),
+                  line=dict(color="black", width=3.5),
               )
           )
           fig2.add_trace(
@@ -242,8 +249,8 @@ if stock_symbol:
                   x=stock_data.index,
                   y=stock_data["MA5"],
                   mode="lines",
-                  name="5日線",
-                  line=dict(color="green", width=2.5),
+                  name="5日線 (週線)",
+                  line=dict(color="green", width=3),
               )
           )
           fig2.add_trace(
@@ -251,8 +258,8 @@ if stock_symbol:
                   x=stock_data.index,
                   y=stock_data["MA20"],
                   mode="lines",
-                  name="20日線",
-                  line=dict(color="orange", width=2.5),
+                  name="20日線 (月線)",
+                  line=dict(color="orange", width=3),
               )
           )
           fig2.add_trace(
@@ -260,8 +267,8 @@ if stock_symbol:
                   x=stock_data.index,
                   y=stock_data["MA60"],
                   mode="lines",
-                  name="60日季線",
-                  line=dict(color="red", width=2.5),
+                  name="60日線 (季線)",
+                  line=dict(color="red", width=3),
               )
           )
           fig2.update_layout(
