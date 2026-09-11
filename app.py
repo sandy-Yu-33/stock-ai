@@ -6,30 +6,28 @@ try:
   import plotly.graph_objects as go
 except ImportError:
   plotly_available = False
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import MinMaxScaler
 import streamlit as st
 import yfinance as yf
 
 # 設置頁面配置
 st.set_page_config(
-    page_title="全方位金融商品 AI 智慧分析系統",
+    page_title="全方位金融商品 AI 智慧看盤系統",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.title("📈 全方位金融商品 AI 智慧分析系統 (台股/美股/期貨/ETF/基金)")
+st.title("📈 全方位金融商品 AI 智慧分析與三竹風看盤系統")
 st.markdown("---")
 
-# 完整涵蓋台股熱門股票、ETF、期貨與美股對照字典
+# 常見商品與台股中文對照字典
 GLOBAL_ASSET_NAMES = {
     "6669.TW": "緯穎 (6669)",
     "2330.TW": "台積電 (2330)",
     "2303.TW": "聯電 (2303)",
     "2317.TW": "鴻海 (2317)",
     "6446.TW": "藥華藥 (6446)",
-    "2454.TW": "聯發科 (2454)",
+    "2454.TW": "聯發科 (MediaTek)",
     "2603.TW": "長榮 (2603)",
     "0050.TW": "元大台灣50 (ETF)",
     "0056.TW": "元大高股息 (ETF)",
@@ -53,7 +51,7 @@ with st.sidebar:
       placeholder="輸入代碼",
   )
 
-  # 智慧代碼解析邏輯
+  # 智慧代碼解析邏輯（支援台股、美股、期貨、ETF、權證與基金代號）
   raw_input = user_input.strip()
   if "." in raw_input or "^" in raw_input:
     symbol = raw_input.upper()
@@ -66,7 +64,6 @@ with st.sidebar:
     else:
       symbol = raw_input.upper()
 
-  # 取得精確名稱
   comp_name = GLOBAL_ASSET_NAMES.get(symbol, f"金融商品 ({symbol})")
 
   time_range = st.selectbox(
@@ -103,9 +100,10 @@ with st.sidebar:
 # 主程式邏輯
 if symbol:
   try:
-    with st.spinner(f"正在載入 {comp_name} ({symbol}) 最新行情..."):
+    with st.spinner(f"正在對齊 Yahoo 股市，載入 {comp_name} ({symbol}) 最新報價..."):
+      # 使用 auto_adjust=True 確保抓取到最正確的還原/真實收盤價
       stock_data = yf.download(
-          symbol, period=period, interval="1d", progress=False
+          symbol, period=period, interval="1d", auto_adjust=True, progress=False
       )
 
       if isinstance(stock_data.columns, pd.MultiIndex):
@@ -121,7 +119,7 @@ if symbol:
           stock_data[col] = pd.to_numeric(stock_data[col], errors="coerce")
       stock_data = stock_data.dropna(subset=["Close"])
 
-      # 強制鎖定最新成交價與前一日收盤價
+      # 強制對齊 Yahoo 股市最新收盤價與前一日收盤價
       current_price = float(stock_data["Close"].iloc[-1])
       prev_close = float(stock_data["Close"].iloc[-2])
       chg = current_price - prev_close
@@ -129,9 +127,9 @@ if symbol:
 
       st.subheader(f"📌 目前檢視標的：{comp_name} (`{symbol}`)")
 
-      # 即時行情報價面板（確保顯示最新價）
+      # 即時行情報價面板（與 Yahoo 股市一致）
       c1, c2, c3, c4 = st.columns(4)
-      c1.metric("最新成交價", f"${current_price:.2f}", f"{chg:+.2f} ({chg_pct:+.2f}%)")
+      c1.metric("最新收盤價", f"${current_price:.2f}", f"{chg:+.2f} ({chg_pct:+.2f}%)")
       c2.metric("今日最高", f"${float(stock_data['High'].iloc[-1]):.2f}")
       c3.metric("今日最低", f"${float(stock_data['Low'].iloc[-1]):.2f}")
       vol_val = int(stock_data["Volume"].iloc[-1])
@@ -165,7 +163,7 @@ if symbol:
       stop_loss = current_price - atr * 1.0
       long_target = current_price * 1.12
 
-      # 強制產生明顯的綠色買點與紅色賣點訊號
+      # 強制產生明確的買賣點三角標記（綠色買進、紅色賣出）
       stock_data["Action"] = "Hold"
       stock_data.loc[stock_data["RSI"] < 45, "Action"] = "Buy"
       stock_data.loc[stock_data["RSI"] > 60, "Action"] = "Sell"
