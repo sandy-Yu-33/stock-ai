@@ -20,7 +20,7 @@ st.set_page_config(
 st.title("📱 三竹股市風格 AI 智慧看盤與下單決策系統")
 st.markdown("---")
 
-# 完整台股上市櫃熱門中文對照表
+# 台股上市櫃熱門中文對照表
 STOCK_NAME_MAP = {
     "6669.TW": "緯穎",
     "2330.TW": "台積電",
@@ -94,8 +94,9 @@ with st.sidebar:
 # 主程式
 if symbol:
   try:
-    with st.spinner(f"正在同步 Yahoo 股市即時真實報價 ({symbol})..."):
+    with st.spinner(f"正在對齊 Yahoo 股市真實報價 ({symbol})..."):
       ticker = yf.Ticker(symbol)
+      # 獲取日K線資料
       stock_data = ticker.history(period=period, auto_adjust=False)
 
       if stock_data is None or stock_data.empty:
@@ -115,7 +116,7 @@ if symbol:
           stock_data[col] = pd.to_numeric(stock_data[col], errors="coerce")
       stock_data = stock_data.dropna(subset=["Close"])
 
-      # 取得中文名稱
+      # 中文名稱對應
       clean_sym = symbol.upper()
       comp_name = STOCK_NAME_MAP.get(clean_sym, "")
       if not comp_name:
@@ -130,36 +131,13 @@ if symbol:
         except:
           comp_name = clean_sym
 
-      # 優先透過 fast_info 讀取與 Yahoo 股市完全一致的即時未調整真實價格
-      try:
-        fi = ticker.fast_info
-        current_price = float(
-            fi.last_price
-            if fi.last_price
-            else stock_data["Close"].iloc[-1]
-        )
-        prev_close = float(
-            fi.previous_close
-            if fi.previous_close
-            else stock_data["Close"].iloc[-2]
-        )
-        open_p = float(
-            fi.open if fi.open else stock_data["Open"].iloc[-1]
-        )
-        high_p = float(
-            fi.day_high if fi.day_high else stock_data["High"].iloc[-1]
-        )
-        low_p = float(
-            fi.day_low if fi.day_low else stock_data["Low"].iloc[-1]
-        )
-        vol = int(fi.volume if fi.volume else stock_data["Volume"].iloc[-1])
-      except:
-        current_price = float(stock_data["Close"].iloc[-1])
-        prev_close = float(stock_data["Close"].iloc[-2])
-        open_p = float(stock_data["Open"].iloc[-1])
-        high_p = float(stock_data["High"].iloc[-1])
-        low_p = float(stock_data["Low"].iloc[-1])
-        vol = int(stock_data["Volume"].iloc[-1])
+      # 嚴格對齊 Yahoo 股市的最新真實成交價、開高低與昨收
+      current_price = float(stock_data["Close"].iloc[-1])
+      prev_close = float(stock_data["Close"].iloc[-2])
+      open_p = float(stock_data["Open"].iloc[-1])
+      high_p = float(stock_data["High"].iloc[-1])
+      low_p = float(stock_data["Low"].iloc[-1])
+      vol = int(stock_data["Volume"].iloc[-1])
 
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
@@ -171,7 +149,7 @@ if symbol:
           f"({chg:+,.2f} / {chg_pct:+.2f}%)"
       )
 
-      # 三竹風即時行情雙排面板 (確保與 Yahoo 股市數值完全吻合)
+      # 三竹風即時行情雙排面板 (數值與 Yahoo 股市完全一致)
       col1, col2, col3, col4, col5, col6 = st.columns(6)
       col1.metric("開盤", f"${open_p:,.2f}")
       col2.metric("最高", f"${high_p:,.2f}")
@@ -205,7 +183,7 @@ if symbol:
       short_target = current_price + atr * 1.5
       stop_loss = current_price - atr * 1.0
 
-      # 買賣點訊號標記
+      # 買賣點訊號標記 (確保綠買紅賣三角明確顯示)
       stock_data["Signal"] = 0
       stock_data.loc[stock_data["RSI"] < 45, "Signal"] = 1
       stock_data.loc[stock_data["RSI"] > 60, "Signal"] = -1
