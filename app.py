@@ -12,20 +12,39 @@ import yfinance as yf
 # 設置頁面配置 (三竹股市風格)
 st.set_page_config(
     page_title="三竹股市 AI 智慧分析系統",
-    page_icon="📈",
+    page_icon="📱",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.title("📱 三竹股市風格 AI 智慧分析與下單決策系統")
+st.title("📱 三竹股市風格 AI 智慧看盤與下單決策系統")
 st.markdown("---")
+
+# 完整台股上市櫃熱門中文對照表（確保中文名稱絕不漏掉）
+STOCK_NAME_MAP = {
+    "6669.TW": "緯穎",
+    "2330.TW": "台積電",
+    "2303.TW": "聯電",
+    "2317.TW": "鴻海",
+    "6446.TW": "藥華藥",
+    "2454.TW": "聯發科",
+    "2603.TW": "長榮",
+    "2609.TW": "陽明",
+    "2308.TW": "台達電",
+    "2881.TW": "富邦金",
+    "2882.TW": "國泰金",
+    "2891.TW": "中信金",
+    "0050.TW": "元大台灣50",
+    "0056.TW": "元大高股息",
+    "00878.TW": "國泰永續高股息",
+}
 
 # 側邊欄：快速自選股與代碼輸入
 with st.sidebar:
-  st.header("🔍 股票與期貨搜尋")
+  st.header("🔍 三竹股市商品搜尋")
 
   user_input = st.text_input(
-      "輸入股票代碼 (例: 6669, 2330, 0050, AAPL)",
+      "輸入台股代碼 (例: 6669, 2330, 0050)",
       value="6669",
       placeholder="輸入 4 碼代號",
   )
@@ -76,32 +95,39 @@ with st.sidebar:
 # 主程式
 if symbol:
   try:
-    with st.spinner(f"正在連線 Yahoo 股市載入 {symbol}..."):
-      stock_data = yf.download(
-          symbol, period=period, interval="1d", auto_adjust=True, progress=False
-      )
-      if isinstance(stock_data.columns, pd.MultiIndex):
-        stock_data.columns = stock_data.columns.droplevel(1)
-
-      # 取得官方公司名稱
+    with st.spinner(f"正在同步 Yahoo 股市即時行情 ({symbol})..."):
       ticker = yf.Ticker(symbol)
-      info = ticker.info
-      comp_name = (
-          info.get("longName")
-          or info.get("shortName")
-          or info.get("symbol")
-          or symbol
-      )
+      stock_data = ticker.history(period=period, auto_adjust=True)
+
+      if stock_data is None or stock_data.empty:
+        # 備用下載機制
+        stock_data = yf.download(
+            symbol, period=period, interval="1d", auto_adjust=True, progress=False
+        )
+        if isinstance(stock_data.columns, pd.MultiIndex):
+          stock_data.columns = stock_data.columns.droplevel(1)
 
     if stock_data is None or stock_data.empty or len(stock_data) < 2:
-      st.error(f"❌ 找不到代碼 `{symbol}`，請確認代號是否正確。")
+      st.error(
+          f"❌ 找不到代碼 `{symbol}`，請確認台股代號是否正確（例如上市請輸入 4 碼）。"
+      )
     else:
       for col in ["Close", "High", "Low", "Open", "Volume"]:
         if col in stock_data.columns:
           stock_data[col] = pd.to_numeric(stock_data[col], errors="coerce")
       stock_data = stock_data.dropna(subset=["Close"])
 
-      # 嚴格從最新數據列提取真實開高走低與收盤價
+      # 取得中文名稱（優先從內建對照表抓取，確保絕對是中文）
+      clean_sym = symbol.upper()
+      comp_name = STOCK_NAME_MAP.get(clean_sym, "")
+      if not comp_name:
+        try:
+          info = ticker.info
+          comp_name = info.get("chineseName") or info.get("shortName") or clean_sym
+        except:
+          comp_name = clean_sym
+
+      # 嚴格對齊最新交易日真實開高走低價
       current_price = float(stock_data["Close"].iloc[-1])
       prev_close = float(stock_data["Close"].iloc[-2])
       open_p = float(stock_data["Open"].iloc[-1])
@@ -112,14 +138,14 @@ if symbol:
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
 
-      # 三竹股市風格標題區
+      # 三竹股市風格標題區（強制顯示中文名稱）
       st.markdown(
-          f"### 📱 **{comp_name} ({symbol})**"
+          f"### 📱 **{comp_name} ({clean_sym})**"
           f"  |  最新收盤: **${current_price:,.2f}** "
           f"({chg:+,.2f} / {chg_pct:+.2f}%)"
       )
 
-      # 三竹風即時行情面板（真實對應最新報價）
+      # 三竹風即時行情雙排面板
       col1, col2, col3, col4, col5, col6 = st.columns(6)
       col1.metric("開盤", f"${open_p:,.2f}")
       col2.metric("最高", f"${high_p:,.2f}")
@@ -153,11 +179,9 @@ if symbol:
       short_target = current_price + atr * 1.5
       stop_loss = current_price - atr * 1.0
 
-      # 強制產生買賣點訊號（利用回檔低點與突破高點，確保圖表絕對有箭頭）
+      # 強制產生買賣點訊號（確保圖表上必定有買賣箭頭標記）
       stock_data["Signal"] = 0
-      # 買點：當價格接近 20 日均線下方或 RSI < 48
       stock_data.loc[stock_data["RSI"] < 48, "Signal"] = 1
-      # 賣點：當 RSI > 58
       stock_data.loc[stock_data["RSI"] > 58, "Signal"] = -1
 
       df_buy = stock_data[stock_data["Signal"] == 1]
@@ -206,7 +230,7 @@ if symbol:
                 )
             )
           fig.update_layout(
-              title=f"{comp_name} 歷史買賣點決策",
+              title=f"{comp_name} ({clean_sym}) 歷史買賣點決策",
               height=480,
               template="plotly_white",
           )
