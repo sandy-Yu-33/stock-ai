@@ -9,65 +9,56 @@ except ImportError:
 import streamlit as st
 import yfinance as yf
 
-# 設置頁面配置
+# 設置頁面配置 (三竹股市風格)
 st.set_page_config(
-    page_title="全方位金融商品 AI 智慧看盤系統",
+    page_title="三竹股市 AI 智慧分析系統",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.title("📈 全方位金融商品 AI 智慧分析與三竹風看盤系統")
+st.title("📱 三竹股市風格 AI 智慧分析與下單決策系統")
 st.markdown("---")
 
-# 常見商品與台股中文對照字典
-GLOBAL_ASSET_NAMES = {
-    "6669.TW": "緯穎 (6669)",
-    "2330.TW": "台積電 (2330)",
-    "2303.TW": "聯電 (2303)",
-    "2317.TW": "鴻海 (2317)",
-    "6446.TW": "藥華藥 (6446)",
-    "2454.TW": "聯發科 (MediaTek)",
-    "2603.TW": "長榮 (2603)",
-    "0050.TW": "元大台灣50 (ETF)",
-    "0056.TW": "元大高股息 (ETF)",
-    "00878.TW": "國泰永續高股息 (ETF)",
-    "AAPL": "蘋果公司 (Apple)",
-    "TSLA": "特斯拉 (Tesla)",
-    "NVDA": "輝達 (NVIDIA)",
-    "^TWII": "台灣加權指數",
-    "^GSPC": "標普500指數",
-    "^IXIC": "那斯達克指數",
-    "^SOX": "費城半導體指數",
+# 台、美股與期貨 ETF 中文名稱對照字典
+TW_STOCK_DICT = {
+    "6669.TW": ("緯穎", "2310.00", "-35.00", "-1.49%"),
+    "2330.TW": ("台積電", "950.00", "+10.00", "+1.06%"),
+    "2303.TW": ("聯電", "52.50", "-0.50", "-0.94%"),
+    "2317.TW": ("鴻海", "185.00", "+2.00", "+1.09%"),
+    "6446.TW": ("藥華藥", "1280.00", "-40.00", "-3.03%"),
+    "2603.TW": ("長榮", "175.00", "+1.50", "+0.86%"),
+    "0050.TW": ("元大台灣50", "182.00", "+0.80", "+0.44%"),
+    "0056.TW": ("元大高股息", "38.50", "+0.10", "+0.26%"),
+    "AAPL": ("蘋果公司 (Apple)", "225.00", "+1.20", "+0.54%"),
+    "^TWII": ("台灣加權指數", "22500.00", "+120.00", "+0.54%"),
 }
 
-# 側邊欄配置
+# 側邊欄：三竹風選股與代碼輸入
 with st.sidebar:
-  st.header("⚙️ 商品搜尋與市場設定")
+  st.header("🔍 三竹股市快速自選股")
 
   user_input = st.text_input(
-      "輸入代碼 (例: 6669, 2330, 0050, AAPL, ^TWII)",
+      "輸入股票代碼 (例: 6669, 2330, 0050, AAPL)",
       value="6669",
-      placeholder="輸入代碼",
+      placeholder="輸入 4 碼代號",
   )
 
-  # 智慧代碼解析邏輯（支援台股、美股、期貨、ETF、權證與基金代號）
-  raw_input = user_input.strip()
-  if "." in raw_input or "^" in raw_input:
-    symbol = raw_input.upper()
+  # 代碼智慧清洗
+  raw = user_input.strip().upper()
+  if "." in raw or "^" in raw:
+    symbol = raw
   else:
-    digits = "".join(filter(str.isdigit, raw_input))
+    digits = "".join(filter(str.isdigit, raw))
     if len(digits) == 4:
       symbol = digits + ".TW"
     elif len(digits) == 5:
       symbol = digits + ".TWO"
     else:
-      symbol = raw_input.upper()
-
-  comp_name = GLOBAL_ASSET_NAMES.get(symbol, f"金融商品 ({symbol})")
+      symbol = raw
 
   time_range = st.selectbox(
-      "選擇歷史走勢區間", ["1個月", "3個月", "6個月", "1年", "2年"]
+      "查看週期", ["1個月", "3個月", "6個月", "1年", "2年"]
   )
   period_map = {
       "1個月": "1mo",
@@ -79,76 +70,83 @@ with st.sidebar:
   period = period_map[time_range]
 
   st.markdown("---")
-  st.subheader("🌐 全球市場指標參考")
+  st.subheader("🌐 大盤與期貨連線")
   for idx_name, sym in {
-      "台指期參考": "^TWII",
-      "標普 500": "^GSPC",
+      "台指期": "^TWII",
+      "標普500": "^GSPC",
       "那斯達克": "^IXIC",
-      "費城半導體": "^SOX",
   }.items():
     try:
-      df_g = yf.download(sym, period="3d", progress=False)
-      if isinstance(df_g.columns, pd.MultiIndex):
-        df_g.columns = df_g.columns.droplevel(1)
-      p_c = float(df_g["Close"].iloc[-1])
-      p_p = float(df_g["Close"].iloc[-2])
-      p_chg = ((p_c - p_p) / p_p) * 100
-      st.metric(idx_name, f"{p_c:,.2f}", f"{p_chg:+.2f}%")
+      df_i = yf.download(sym, period="3d", progress=False)
+      if isinstance(df_i.columns, pd.MultiIndex):
+        df_i.columns = df_i.columns.droplevel(1)
+      c_val = float(df_i["Close"].iloc[-1])
+      p_val = float(df_i["Close"].iloc[-2])
+      c_chg = ((c_val - p_val) / p_val) * 100
+      st.metric(idx_name, f"{c_val:,.2f}", f"{c_chg:+.2f}%")
     except:
       st.text(f"{idx_name}: 連線中...")
 
-# 主程式邏輯
+# 主程式
 if symbol:
   try:
-    with st.spinner(f"正在對齊 Yahoo 股市，載入 {comp_name} ({symbol}) 最新報價..."):
-      # 使用 auto_adjust=True 確保抓取到最正確的還原/真實收盤價
+    with st.spinner(f"正在連線 Yahoo 股市載入 {symbol}..."):
       stock_data = yf.download(
           symbol, period=period, interval="1d", auto_adjust=True, progress=False
       )
-
       if isinstance(stock_data.columns, pd.MultiIndex):
         stock_data.columns = stock_data.columns.droplevel(1)
 
     if stock_data is None or stock_data.empty or len(stock_data) < 2:
-      st.error(
-          f"❌ 找不到代碼 `{symbol}` 的資料！請確認代號是否正確（台股上市請輸入 4 碼數字）。"
-      )
+      st.error(f"❌ 找不到代碼 `{symbol}`，請確認台股代號是否正確。")
     else:
       for col in ["Close", "High", "Low", "Open", "Volume"]:
         if col in stock_data.columns:
           stock_data[col] = pd.to_numeric(stock_data[col], errors="coerce")
       stock_data = stock_data.dropna(subset=["Close"])
 
-      # 強制對齊 Yahoo 股市最新收盤價與前一日收盤價
+      # 取得名稱與最新價
+      info_tuple = TW_STOCK_DICT.get(symbol, (symbol, "0", "0", "0"))
+      comp_chinese_name = info_tuple[0]
+
       current_price = float(stock_data["Close"].iloc[-1])
       prev_close = float(stock_data["Close"].iloc[-2])
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
+      open_p = float(stock_data["Open"].iloc[-1])
+      high_p = float(stock_data["High"].iloc[-1])
+      low_p = float(stock_data["Low"].iloc[-1])
+      vol = int(stock_data["Volume"].iloc[-1])
 
-      st.subheader(f"📌 目前檢視標的：{comp_name} (`{symbol}`)")
+      # 三竹股市風格標題區
+      st.markdown(
+          f"### 📊 **{comp_chinese_name} ({symbol})**"
+          f"  |  最新收盤: **${current_price:,.2f}** "
+          f"({chg:+,.2f} / {chg_pct:+.2f}%)"
+      )
 
-      # 即時行情報價面板（與 Yahoo 股市一致）
-      c1, c2, c3, c4 = st.columns(4)
-      c1.metric("最新收盤價", f"${current_price:.2f}", f"{chg:+.2f} ({chg_pct:+.2f}%)")
-      c2.metric("今日最高", f"${float(stock_data['High'].iloc[-1]):.2f}")
-      c3.metric("今日最低", f"${float(stock_data['Low'].iloc[-1]):.2f}")
-      vol_val = int(stock_data["Volume"].iloc[-1])
-      c4.metric("成交量", f"{vol_val:,} 股/張")
+      # 三竹風即時行情雙排面板
+      col1, col2, col3, col4, col5, col6 = st.columns(6)
+      col1.metric("開盤", f"${open_p:,.2f}")
+      col2.metric("最高", f"${high_p:,.2f}")
+      col3.metric("最低", f"${low_p:,.2f}")
+      col4.metric("昨收", f"${prev_close:,.2f}")
+      col5.metric("成交量", f"{vol:,}")
+      col6.metric("漲跌幅", f"{chg_pct:+.2f}%")
 
       st.markdown("---")
 
-      # 計算技術指標
+      # 技術指標計算
       stock_data["MA5"] = stock_data["Close"].rolling(5).mean()
       stock_data["MA20"] = stock_data["Close"].rolling(20).mean()
       stock_data["MA60"] = stock_data["Close"].rolling(60).mean()
 
       delta = stock_data["Close"].diff()
-      gain = delta.where(delta > 0, 0).rolling(window=14).mean()
-      loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-      rs = gain / loss
-      stock_data["RSI"] = 100 - (100 / (1 + rs))
+      gain = delta.where(delta > 0, 0).rolling(14).mean()
+      loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+      stock_data["RSI"] = 100 - (100 / (1 + (gain / loss)))
 
-      # 計算 ATR 與目標價
+      # ATR 目標價
       tr = pd.concat(
           [
               stock_data["High"] - stock_data["Low"],
@@ -158,26 +156,32 @@ if symbol:
           axis=1,
       ).max(axis=1)
       atr = float(tr.rolling(14).mean().iloc[-1])
-
       short_target = current_price + atr * 1.5
       stop_loss = current_price - atr * 1.0
-      long_target = current_price * 1.12
 
-      # 強制產生明確的買賣點三角標記（綠色買進、紅色賣出）
-      stock_data["Action"] = "Hold"
-      stock_data.loc[stock_data["RSI"] < 45, "Action"] = "Buy"
-      stock_data.loc[stock_data["RSI"] > 60, "Action"] = "Sell"
+      # 買賣點訊號 (綠色買進、紅色賣出)
+      stock_data["Signal"] = 0
+      stock_data.loc[
+          (stock_data["MA5"] > stock_data["MA20"])
+          & (stock_data["MA5"].shift(1) <= stock_data["MA20"].shift(1)),
+          "Signal",
+      ] = 1
+      stock_data.loc[
+          (stock_data["MA5"] < stock_data["MA20"])
+          & (stock_data["MA5"].shift(1) >= stock_data["MA20"].shift(1)),
+          "Signal",
+      ] = -1
 
-      df_buy = stock_data[stock_data["Action"] == "Buy"]
-      df_sell = stock_data[stock_data["Action"] == "Sell"]
+      df_buy = stock_data[stock_data["Signal"] == 1]
+      df_sell = stock_data[stock_data["Signal"] == -1]
 
-      # 分頁介面
+      # 三竹風功能分頁
       tab1, tab2, tab3, tab4 = st.tabs(
-          ["📊 三竹風買賣訊號", "📈 加粗均線與指標", "🎯 當沖/目標價規劃", "📰 相關財經資訊"]
+          ["📈 三竹風 K線與買賣訊號", "📊 多週期均線對照", "⚡ 當沖與目標價", "📰 盤勢新聞"]
       )
 
       with tab1:
-        st.subheader("🎯 建議買點 (綠三角) 與 賣點 (紅倒三角) 標示圖")
+        st.subheader("🟢 建議買點 (綠三角) 與 🔴 建議賣出 (紅倒三角)")
         if plotly_available:
           fig = go.Figure()
           fig.add_trace(
@@ -186,7 +190,7 @@ if symbol:
                   y=stock_data["Close"],
                   mode="lines",
                   name="收盤價",
-                  line=dict(color="#1f77b4", width=4),
+                  line=dict(color="#1f77b4", width=3.5),
               )
           )
           if not df_buy.empty:
@@ -195,8 +199,8 @@ if symbol:
                     x=df_buy.index,
                     y=df_buy["Close"],
                     mode="markers",
-                    name="建議買進 (Buy)",
-                    marker=dict(color="green", size=16, symbol="triangle-up"),
+                    name="買進訊號 (Buy)",
+                    marker=dict(color="green", size=15, symbol="triangle-up"),
                 )
             )
           if not df_sell.empty:
@@ -205,103 +209,81 @@ if symbol:
                     x=df_sell.index,
                     y=df_sell["Close"],
                     mode="markers",
-                    name="建議賣出 (Sell)",
-                    marker=dict(color="red", size=16, symbol="triangle-down"),
+                    name="賣出訊號 (Sell)",
+                    marker=dict(color="red", size=15, symbol="triangle-down"),
                 )
             )
           fig.update_layout(
-              title=f"{comp_name} 歷史買賣點決策對照",
-              xaxis_title="日期",
-              yaxis_title="價格 (NT$)",
-              height=500,
+              title=f"{comp_chinese_name} 均線交叉買賣點",
+              height=480,
               template="plotly_white",
           )
           st.plotly_chart(fig, use_container_width=True)
 
       with tab2:
-        st.subheader("📈 清晰多週期均線 (MA5, MA20, MA60)")
+        st.subheader("📈 移動平均線 (MA5, MA20, MA60)")
         if plotly_available:
           fig2 = go.Figure()
           fig2.add_trace(
               go.Scatter(
                   x=stock_data.index,
                   y=stock_data["Close"],
-                  mode="lines",
                   name="收盤價",
-                  line=dict(color="black", width=3.5),
+                  line=dict(color="black", width=3),
               )
           )
           fig2.add_trace(
               go.Scatter(
                   x=stock_data.index,
                   y=stock_data["MA5"],
-                  mode="lines",
                   name="5日線",
-                  line=dict(color="green", width=3),
+                  line=dict(color="green", width=2.5),
               )
           )
           fig2.add_trace(
               go.Scatter(
                   x=stock_data.index,
                   y=stock_data["MA20"],
-                  mode="lines",
                   name="20日線",
-                  line=dict(color="orange", width=3),
+                  line=dict(color="orange", width=2.5),
               )
           )
           fig2.add_trace(
               go.Scatter(
                   x=stock_data.index,
                   y=stock_data["MA60"],
-                  mode="lines",
-                  name="60日季線",
-                  line=dict(color="red", width=3),
+                  name="60日線",
+                  line=dict(color="red", width=2.5),
               )
           )
-          fig2.update_layout(
-              title="移動平均線走勢", height=450, template="plotly_white"
-          )
+          fig2.update_layout(height=450, template="plotly_white")
           st.plotly_chart(fig2, use_container_width=True)
 
       with tab3:
-        st.subheader("⚡ 實戰交易策略與目標價規劃")
-        col_s1, col_s2 = st.columns(2)
-        with col_s1:
-          st.markdown("#### 🚀 隔日沖與當沖評估")
-          tail_p = (stock_data["Close"].iloc[-1] - stock_data["Low"].iloc[-1]) / (
+        st.subheader("⚡ 實戰當沖、隔日沖與目標價")
+        col_a, col_b = st.columns(2)
+        with col_a:
+          st.markdown("#### 🚀 當沖與隔日沖評估")
+          tail = (stock_data["Close"].iloc[-1] - stock_data["Low"].iloc[-1]) / (
               stock_data["High"].iloc[-1] - stock_data["Low"].iloc[-1] + 1e-6
           )
-          vol_s = (
-              stock_data["Volume"].iloc[-1]
-              / stock_data["Volume"].rolling(5).mean().iloc[-1]
-          )
-          if tail_p > 0.65 and vol_s > 1.2:
-            st.success("🔥 **強烈推薦隔日沖**：尾盤帶量上拉，具備開高優勢。")
+          if tail > 0.65:
+            st.success("🔥 **適合隔日沖**：尾盤買盤積極，具備開高效應。")
           else:
-            st.info("⚪ **一般盤勢**：量價結構平穩，依技術支撐操作。")
-          st.write(f"- 尾盤收拉強度: `{tail_p:.2f}`")
-          st.write(f"- 成交量放大倍數: `{vol_s:.2f}x`")
-
-        with col_s2:
-          st.markdown("#### 🎯 目標價與停損點設定")
-          st.metric("建議進場參考價", f"${current_price:.2f}")
-          st.metric("短期波段目標價", f"${short_target:.2f}")
-          st.metric("長期核心目標價", f"${long_target:.2f}")
-          st.metric("建議停損價", f"${stop_loss:.2f}")
+            st.info("⚪ **觀望盤勢**：量價結構平穩。")
+          st.write(f"- 尾盤收拉強度: `{tail:.2f}`")
+        with col_b:
+          st.markdown("#### 🎯 價格規劃")
+          st.metric("建議進場參考", f"${current_price:,.2f}")
+          st.metric("短期波段目標", f"${short_target:,.2f}")
+          st.metric("建議嚴格停損", f"${stop_loss:,.2f}")
 
       with tab4:
-        st.subheader("📰 專業財經資訊與看盤網站")
-        st.markdown(
-            "- [鉅亨網台股頻道](https://www.cnyes.com/twstock) - 深入產業分析"
-        )
-        st.markdown(
-            "- [Yahoo 股市](https://tw.stock.yahoo.com/) - 三大法人籌碼與即時報價"
-        )
-        st.markdown(
-            "- [Investing.com 台灣](https://tw.investing.com/) - 國際期貨與外匯"
-        )
+        st.subheader("📰 三竹股市財經快訊")
+        st.markdown("- [Yahoo 股市即時行情](https://tw.stock.yahoo.com/)")
+        st.markdown("- [鉅亨網台股頻道](https://www.cnyes.com/twstock)")
 
   except Exception as e:
     st.error(f"❌ 系統錯誤: {str(e)}")
 else:
-  st.info("👈 請於左側邊欄輸入任何金融商品代碼開始分析。")
+    st.info("👈 請於左側邊欄輸入代碼。")
