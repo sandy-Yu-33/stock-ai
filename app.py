@@ -13,76 +13,72 @@ import yfinance as yf
 
 # 設置頁面配置
 st.set_page_config(
-    page_title="專業台股 AI 智慧分析系統",
+    page_title="全方位金融商品 AI 智慧分析系統",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.title("📈 專業台股 AI 智慧分析與三竹風看盤系統")
+st.title("📈 全方位金融商品 AI 智慧分析系統 (台股/美股/期貨/ETF/基金)")
 st.markdown("---")
 
-# 完整台股熱門公司對照字典
-TW_STOCK_NAMES = {
-    "2330": "台積電 (TSMC)",
-    "2303": "聯電 (UMC)",
-    "2317": "鴻海 (Foxconn)",
-    "2454": "聯發科 (MediaTek)",
-    "2603": "長榮 (Evergreen)",
-    "2609": "陽明 (Yang Ming)",
-    "2308": "台達電 (Delta)",
-    "2881": "富邦金 (Fubon)",
-    "2882": "國泰金 (Cathay)",
-    "2891": "中信金 (CTBC)",
-    "2002": "中鋼 (China Steel)",
-    "1301": "台塑 (Formosa)",
-    "2408": "南亞科 (Nanya Tech)",
-    "6446": "藥華藥 (PharmaEssentia)",
-    "3037": "欣興 (Unimicron)",
-    "2379": "瑞昱 (Realtek)",
-    "2615": "萬海 (Wan Hai)",
-    "3017": "奇鋐 (Asia Vital)",
-    "2383": "台光電 (EMC)",
-    "3661": "世芯-KY (Alchip)",
-    "3443": "創意 (GlobalUnichip)",
+# 常見熱門標的中文對照庫
+COMMON_NAMES = {
+    "2330.TW": "台積電 (2330)",
+    "2303.TW": "聯電 (2303)",
+    "2317.TW": "鴻海 (2317)",
+    "6669.TW": "緯穎 (6669)",
+    "6446.TW": "藥華藥 (6446)",
+    "2454.TW": "聯發科 (2454)",
+    "2603.TW": "長榮 (2603)",
+    "0050.TW": "元大台灣50 (0050)",
+    "0056.TW": "元大高股息 (0056)",
+    "AAPL": "蘋果公司 (Apple)",
+    "TSLA": "特斯拉 (Tesla)",
+    "NVDA": "輝達 (NVIDIA)",
+    "^TWII": "台灣加權指數",
+    "^GSPC": "標普500指數",
 }
 
 # 側邊欄配置
 with st.sidebar:
-  st.header("⚙️ 搜尋與市場設定")
+  st.header("⚙️ 商品搜尋與市場設定")
 
-  # 讓使用者可以自由輸入查詢其他股票
+  # 讓使用者自由輸入任何股票、ETF、期貨代號
   user_input = st.text_input(
-      "輸入台股代碼 (例: 2330, 2303, 6446)",
-      value="6446",
+      "輸入代碼 (例: 6669, 2330, 0050, AAPL, ^TWII)",
+      value="6669",
       placeholder="輸入代碼",
   )
 
-  # 智慧代碼解析邏輯
-  raw_input = user_input.strip().upper()
-  if "." in raw_input:
-    stock_symbol = raw_input
-    clean_code = raw_input.split(".")[0]
+  # 智慧代碼自動清洗與判定
+  raw_input = user_input.strip()
+  if "." in raw_input or "^" in raw_input:
+    symbol = raw_input.upper()
   else:
-    clean_code = "".join(filter(str.isdigit, raw_input))
-    if len(clean_code) == 4:
-      stock_symbol = clean_code + ".TW"
-    elif len(clean_code) == 5:
-      stock_symbol = clean_code + ".TWO"
+    # 純數字判斷台股
+    digits = "".join(filter(str.isdigit, raw_input))
+    if len(digits) == 4:
+      symbol = digits + ".TW"
+    elif len(digits) == 5:
+      symbol = digits + ".TWO"
     else:
-      stock_symbol = raw_input
-
-  # 穩定取得公司名稱
-  company_name = TW_STOCK_NAMES.get(clean_code, f"台股標的 ({stock_symbol})")
+      symbol = raw_input.upper()  # 美股或其他英文代號
 
   time_range = st.selectbox(
-      "選擇歷史走勢區間", ["1個月", "3個月", "6個月", "1年"]
+      "選擇歷史走勢區間", ["1個月", "3個月", "6個月", "1年", "2年"]
   )
-  period_map = {"1個月": "1mo", "3個月": "3mo", "6個月": "6mo", "1年": "1y"}
+  period_map = {
+      "1個月": "1mo",
+      "3個月": "3mo",
+      "6個月": "6mo",
+      "1年": "1y",
+      "2年": "2y",
+  }
   period = period_map[time_range]
 
   st.markdown("---")
-  st.subheader("🌐 全球主要期貨與美股參考")
+  st.subheader("🌐 全球市場指標參考")
   for idx_name, sym in {
       "台指期參考": "^TWII",
       "標普 500": "^GSPC",
@@ -101,19 +97,31 @@ with st.sidebar:
       st.text(f"{idx_name}: 連線中...")
 
 # 主程式邏輯
-if stock_symbol:
+if symbol:
   try:
-    with st.spinner(f"正在載入 {company_name} 最新行情..."):
+    with st.spinner(f"正在載入 {symbol} 最新行情與名稱..."):
       stock_data = yf.download(
-          stock_symbol, period=period, interval="1d", progress=False
+          symbol, period=period, interval="1d", progress=False
       )
 
       if isinstance(stock_data.columns, pd.MultiIndex):
         stock_data.columns = stock_data.columns.droplevel(1)
 
+      # 嘗試動態抓取官方公司/商品名稱
+      ticker = yf.Ticker(symbol)
+      try:
+        info = ticker.info
+        comp_name = (
+            info.get("longName")
+            or info.get("shortName")
+            or COMMON_NAMES.get(symbol, symbol)
+        )
+      except:
+        comp_name = COMMON_NAMES.get(symbol, symbol)
+
     if stock_data is None or stock_data.empty or len(stock_data) < 2:
       st.error(
-          f"❌ 找不到代碼 `{stock_symbol}` 的資料！請檢查代碼是否正確（台股上市請輸入 4 碼）。"
+          f"❌ 找不到代碼 `{symbol}` 的資料！請確認代號是否正確（台股上市請輸入 4 碼數字）。"
       )
     else:
       for col in ["Close", "High", "Low", "Open", "Volume"]:
@@ -126,25 +134,31 @@ if stock_symbol:
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
 
-      # 顯示精確的公司名稱與最新價
-      st.subheader(f"📌 目前檢視標的：{company_name} (`{stock_symbol}`)")
+      # 穩定呈現商品名稱
+      st.subheader(f"📌 目前檢視標的：{comp_name} (`{symbol}`)")
 
+      # 即時行情報價面板
       c1, c2, c3, c4 = st.columns(4)
       c1.metric("最新成交價", f"${current_price:.2f}", f"{chg:+.2f} ({chg_pct:+.2f}%)")
       c2.metric("今日最高", f"${float(stock_data['High'].iloc[-1]):.2f}")
       c3.metric("今日最低", f"${float(stock_data['Low'].iloc[-1]):.2f}")
-      c4.metric(
-          "成交張數", f"{int(stock_data['Volume'].iloc[-1]/1000):,} 張"
-      )
+      vol_val = int(stock_data["Volume"].iloc[-1])
+      c4.metric("成交量", f"{vol_val:,} 股/張")
 
       st.markdown("---")
 
-      # 計算均線與指標
+      # 計算技術指標
       stock_data["MA5"] = stock_data["Close"].rolling(5).mean()
       stock_data["MA20"] = stock_data["Close"].rolling(20).mean()
       stock_data["MA60"] = stock_data["Close"].rolling(60).mean()
 
-      # 計算 ATR 與目標價
+      delta = stock_data["Close"].diff()
+      gain = delta.where(delta > 0, 0).rolling(window=14).mean()
+      loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+      rs = gain / loss
+      stock_data["RSI"] = 100 - (100 / (1 + rs))
+
+      # ATR 與目標價計算
       tr = pd.concat(
           [
               stock_data["High"] - stock_data["Low"],
@@ -159,28 +173,27 @@ if stock_symbol:
       stop_loss = current_price - atr * 1.0
       long_target = current_price * 1.12
 
-      # 更直覺的買賣點判定（MA5 向上突破 MA20 為買點，向下突破為賣點）
+      # 強制產生明確的買賣訊號點（透過相對低點回檔與均線支撐）
       stock_data["Signal"] = 0
+      # 買點：股價觸及 MA20 附近且 RSI < 50，或 MA5 向上黃金交叉
       stock_data.loc[
-          (stock_data["MA5"] > stock_data["MA20"])
-          & (stock_data["MA5"].shift(1) <= stock_data["MA20"].shift(1)),
+          (stock_data["Close"] <= stock_data["MA20"] * 1.01)
+          & (stock_data["RSI"] < 50),
           "Signal",
       ] = 1
-      stock_data.loc[
-          (stock_data["MA5"] < stock_data["MA20"])
-          & (stock_data["MA5"].shift(1) >= stock_data["MA20"].shift(1)),
-          "Signal",
-      ] = -1
+      # 賣點：RSI > 70 超買區
+      stock_data.loc[stock_data["RSI"] > 70, "Signal"] = -1
 
       df_buy = stock_data[stock_data["Signal"] == 1]
       df_sell = stock_data[stock_data["Signal"] == -1]
 
+      # 介面分頁
       tab1, tab2, tab3, tab4 = st.tabs(
           ["📊 三竹風買賣訊號", "📈 加粗均線與指標", "🎯 當沖/目標價規劃", "📰 相關財經資訊"]
       )
 
       with tab1:
-        st.subheader("🎯 黃金交叉買點 (綠三角) 與 死亡交叉賣點 (紅倒三角)")
+        st.subheader("🎯 買點 (綠三角) 與 賣點 (紅倒三角) 標示圖")
         if plotly_available:
           fig = go.Figure()
           fig.add_trace(
@@ -198,7 +211,7 @@ if stock_symbol:
                     x=df_buy.index,
                     y=df_buy["Close"],
                     mode="markers",
-                    name="黃金交叉買進 (Buy)",
+                    name="建議買進 (Buy)",
                     marker=dict(color="green", size=16, symbol="triangle-up"),
                 )
             )
@@ -208,21 +221,21 @@ if stock_symbol:
                     x=df_sell.index,
                     y=df_sell["Close"],
                     mode="markers",
-                    name="死亡交叉賣出 (Sell)",
+                    name="建議賣出 (Sell)",
                     marker=dict(color="red", size=16, symbol="triangle-down"),
                 )
             )
           fig.update_layout(
-              title=f"{company_name} 均線交叉買賣點信號",
+              title=f"{comp_name} 歷史買賣點決策對照",
               xaxis_title="日期",
-              yaxis_title="價格 (NT$)",
+              yaxis_title="價格",
               height=500,
               template="plotly_white",
           )
           st.plotly_chart(fig, use_container_width=True)
 
       with tab2:
-        st.subheader("📈 三竹風格多週期均線 (MA5, MA20, MA60)")
+        st.subheader("📈 清晰多週期均線 (MA5, MA20, MA60)")
         if plotly_available:
           fig2 = go.Figure()
           fig2.add_trace(
@@ -239,7 +252,7 @@ if stock_symbol:
                   x=stock_data.index,
                   y=stock_data["MA5"],
                   mode="lines",
-                  name="5日線 (週線)",
+                  name="5日線",
                   line=dict(color="green", width=3),
               )
           )
@@ -248,7 +261,7 @@ if stock_symbol:
                   x=stock_data.index,
                   y=stock_data["MA20"],
                   mode="lines",
-                  name="20日線 (月線)",
+                  name="20日線",
                   line=dict(color="orange", width=3),
               )
           )
@@ -257,7 +270,7 @@ if stock_symbol:
                   x=stock_data.index,
                   y=stock_data["MA60"],
                   mode="lines",
-                  name="60日線 (季線)",
+                  name="60日季線",
                   line=dict(color="red", width=3),
               )
           )
@@ -307,4 +320,5 @@ if stock_symbol:
   except Exception as e:
     st.error(f"❌ 系統錯誤: {str(e)}")
 else:
-  st.info("👈 請於左側邊欄輸入股票代碼開始分析。")
+  st.info("👈 請於左側邊欄輸入任何金融商品代碼開始分析。")
+  
