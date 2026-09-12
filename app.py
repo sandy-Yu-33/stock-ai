@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（徹底修復下拉選單文字清晰度）
+# 注入高質感深色操盤室 CSS 樣式（將下拉選單文字強制改為深黑色以確保清晰）
 st.markdown(
     """
     <style>
@@ -33,29 +33,27 @@ st.markdown(
         color: #e2e8f0 !important;
     }
     
-    /* 強效修復下拉選單 (selectbox) 文字清晰度與顏色 */
+    /* 下拉選單 (selectbox) 專用黑字與白底設計 */
     div[data-baseweb="select"] > div {
-        background-color: #131c31 !important;
-        color: #ffffff !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
         border: 1px solid #334155 !important;
     }
     div[data-baseweb="select"] span {
-        color: #ffffff !important;
+        color: #000000 !important;
+        font-weight: 600 !important;
     }
     div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
-        background-color: #131c31 !important;
-        color: #ffffff !important;
+        background-color: #ffffff !important;
     }
-    div[data-baseweb="popover"] div, div[data-baseweb="menu"] div, span[role="option"] {
-        color: #ffffff !important;
-    }
-    li[role="option"] {
-        background-color: #131c31 !important;
-        color: #ffffff !important;
+    div[data-baseweb="popover"] div, div[data-baseweb="menu"] div, span[role="option"], li[role="option"] {
+        color: #000000 !important;
+        background-color: #ffffff !important;
+        font-weight: 500 !important;
     }
     li[role="option"]:hover {
-        background-color: #1e293b !important;
-        color: #38bdf8 !important;
+        background-color: #38bdf8 !important;
+        color: #ffffff !important;
     }
 
     .stMetric { 
