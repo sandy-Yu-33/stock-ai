@@ -17,67 +17,78 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高級極光金融夜景 CSS 樣式
+# 注入高質感深色操盤室 CSS 樣式（強制解決白底白字問題）
 st.markdown(
     """
     <style>
-    /* 全域背景與字型優化 */
-    .main { 
-        background: linear-gradient(135deg, #090d16 0%, #111827 100%); 
-        color: #e2e8f0; 
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    /* 強制設定全域深色背景與亮色文字 */
+    .stApp { 
+        background-color: #090d16 !important; 
+        color: #f8fafc !important; 
+    }
+    .main, .block-container { 
+        background-color: #090d16 !important; 
+        color: #f8fafc !important; 
     }
     
     /* 側邊欄樣式 */
-    .css-1d391kg, [data-testid="stSidebar"] { 
-        background-color: #0b1120; 
+    [data-testid="stSidebar"] { 
+        background-color: #0b1120 !important; 
         border-right: 1px solid #1e293b;
+    }
+    [data-testid="stSidebar"] label, [data-testid="stSidebar"] .stMarkdown {
+        color: #e2e8f0 !important;
     }
 
     /* 頂級儀表板卡片 */
     .stMetric { 
-        background: linear-gradient(145deg, #131c31 0%, #0f172a 100%); 
-        padding: 18px; 
-        border-radius: 14px; 
-        border: 1px solid #1e293b;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        background: linear-gradient(145deg, #131c31 0%, #0f172a 100%) !important; 
+        padding: 18px !important; 
+        border-radius: 14px !important; 
+        border: 1px solid #1e293b !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4) !important;
     }
     .stMetric label { color: #94a3b8 !important; font-weight: 500; }
     .stMetric [data-testid="stMetricValue"] { color: #f8fafc !important; font-weight: 700; }
 
     /* 支撐壓力與 AI 區塊卡片 */
     .support-box { 
-        background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 95, 70, 0.15) 100%); 
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 95, 70, 0.2) 100%); 
         border-left: 5px solid #10b981; 
         padding: 18px; 
         border-radius: 10px; 
         margin-bottom: 14px;
-        border-top: 1px solid rgba(16, 185, 129, 0.2);
-        border-right: 1px solid rgba(16, 185, 129, 0.2);
-        border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        color: #f8fafc !important;
     }
     .resistance-box { 
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(153, 27, 27, 0.15) 100%); 
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(153, 27, 27, 0.2) 100%); 
         border-left: 5px solid #ef4444; 
         padding: 18px; 
         border-radius: 10px; 
         margin-bottom: 14px;
-        border-top: 1px solid rgba(239, 68, 68, 0.2);
-        border-right: 1px solid rgba(239, 68, 68, 0.2);
-        border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #f8fafc !important;
     }
     .ai-box { 
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 58, 138, 0.2) 100%); 
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(30, 58, 138, 0.25) 100%); 
         border-left: 5px solid #3b82f6; 
         padding: 20px; 
         border-radius: 12px; 
         margin-bottom: 15px;
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.4);
+        color: #f8fafc !important;
     }
     
     /* 標題與文字點綴 */
-    h1, h2, h3 { color: #f8fafc !important; }
+    h1, h2, h3, h4, h5, h6, p, span, div { color: #f8fafc !important; }
+    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
+        color: #cbd5e1 !important;
+        font-weight: 600;
+    }
+    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] [data-testid="stMarkdownContainer"] p {
+        color: #38bdf8 !important;
+    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -86,8 +97,9 @@ st.markdown(
 st.title("💎 Aurora Executive | 頂級機構級 AI 智慧操盤系統")
 st.markdown("---")
 
-# 全球資產與台股熱門對照庫
+# 擴充台股熱門中文對照庫（確保絕不顯示英文名稱）
 GLOBAL_ASSET_NAME_MAP = {
+    "2313.TW": "華通",
     "6669.TW": "緯穎",
     "2330.TW": "台積電",
     "2303.TW": "聯電",
@@ -118,8 +130,8 @@ GLOBAL_ASSET_NAME_MAP = {
 with st.sidebar:
   st.header("⚙️ 全球資產搜尋設定")
   user_input = st.text_input(
-      "輸入代碼或名稱 (例: 6669, 0050, ^TWII, AAPL)",
-      value="6669",
+      "輸入代碼或名稱 (例: 2313, 6669, 0050, AAPL)",
+      value="2313",
       placeholder="輸入代碼",
   )
 
@@ -179,20 +191,22 @@ if symbol:
         if isinstance(stock_data.columns, pd.MultiIndex):
           stock_data.columns = stock_data.columns.droplevel(1)
 
-      try:
-        info = ticker.info
-        fetched_name = (
-            info.get("chineseName")
-            or info.get("longName")
-            or info.get("shortName")
-            or ""
-        )
-      except:
-        fetched_name = ""
-
-      comp_name = GLOBAL_ASSET_NAME_MAP.get(
-          symbol, fetched_name if fetched_name else symbol
-      )
+      # 智慧中文名稱對應與清理
+      comp_name = GLOBAL_ASSET_NAME_MAP.get(symbol, "")
+      if not comp_name:
+        try:
+          info = ticker.info
+          comp_name = (
+              info.get("chineseName")
+              or info.get("longName")
+              or info.get("shortName")
+              or symbol
+          )
+          # 若抓到英文名稱，進行基礎清理或保留
+          if "Co." in comp_name or "Inc." in comp_name or "Corporation" in comp_name:
+            comp_name = f"台股標的 ({symbol.split('.')[0]})"
+        except:
+          comp_name = symbol
 
     if stock_data is None or stock_data.empty or len(stock_data) < 2:
       st.error(
@@ -223,10 +237,10 @@ if symbol:
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
 
-      # 頂部標題區：高質感呈現 股名 與 代號（方便紀錄）
+      # 頂部標題區：高質感呈現 股名 與 代號
       st.markdown(
           f"## 📌 標的名稱：<span style='color: #38bdf8;'>{comp_name}</span> | 代號：<span style='color: #fbbf24;'>`{symbol}`</span>"
-          f"<br><span style='font-size: 20px;'>最新成交價: <b>${current_price:,.2f}</b> "
+          f"<br><span style='font-size: 20px; color: #f8fafc;'>最新成交價: <b>${current_price:,.2f}</b> "
           f"({chg:+,.2f} / {chg_pct:+.2f}%)</span>",
           unsafe_allow_html=True,
       )
@@ -271,7 +285,6 @@ if symbol:
       )
       down_prob = round(100 - up_prob, 1)
 
-      # 購買/賣出訊號判定
       signal_text = "觀望中 (Hold)"
       signal_color = "#f59e0b"
       if recent_rsi < 45 and current_price >= support_1 * 0.98:
@@ -299,17 +312,17 @@ if symbol:
           st.markdown(
               f"""
                     <div class="support-box">
-                        <b>近端支撐 (MA60 / 結構防守)</b><br>
+                        <b style="color: #34d399;">近端支撐 (MA60 / 結構防守)</b><br>
                         <span style="font-size: 24px; color: #34d399; font-weight: bold;">${support_1:,.2f}</span><br>
                         <small style="color: #94a3b8;">距離現價: {((support_1 - current_price)/current_price)*100:.1f}%</small>
                     </div>
                     <div class="support-box">
-                        <b>法人估計成本區 (次近端)</b><br>
+                        <b style="color: #34d399;">法人估計成本區 (次近端)</b><br>
                         <span style="font-size: 24px; color: #34d399; font-weight: bold;">${support_2:,.2f}</span><br>
                         <small style="color: #94a3b8;">距離現價: {((support_2 - current_price)/current_price)*100:.1f}%</small>
                     </div>
                     <div class="support-box">
-                        <b>長期結構防守點 (20日低點)</b><br>
+                        <b style="color: #34d399;">長期結構防守點 (20日低點)</b><br>
                         <span style="font-size: 24px; color: #34d399; font-weight: bold;">${support_3:,.2f}</span><br>
                         <small style="color: #94a3b8;">距離現價: {((support_3 - current_price)/current_price)*100:.1f}%</small>
                     </div>
@@ -322,17 +335,17 @@ if symbol:
           st.markdown(
               f"""
                     <div class="resistance-box">
-                        <b>關鍵突破 / 壓力共振區 (第一壓力)</b><br>
+                        <b style="color: #f87171;">關鍵突破 / 壓力共振區 (第一壓力)</b><br>
                         <span style="font-size: 24px; color: #f87171; font-weight: bold;">${resistance_1:,.2f}</span><br>
                         <small style="color: #94a3b8;">距離現價: {((resistance_1 - current_price)/current_price)*100:.1f}%</small>
                     </div>
                     <div class="resistance-box">
-                        <b>第二壓力區 (獨立目標價)</b><br>
+                        <b style="color: #f87171;">第二壓力區 (獨立目標價)</b><br>
                         <span style="font-size: 24px; color: #f87171; font-weight: bold;">${resistance_2:,.2f}</span><br>
                         <small style="color: #94a3b8;">距離現價: {((resistance_2 - current_price)/current_price)*100:.1f}%</small>
                     </div>
-                    <div class="resistance-box" style="border-left-color: #38bdf8; background: linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(3, 105, 161, 0.15) 100%);">
-                        <b>本季預計到達目標價</b><br>
+                    <div class="resistance-box" style="border-left-color: #38bdf8; background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(3, 105, 161, 0.2) 100%);">
+                        <b style="color: #38bdf8;">本季預計到達目標價</b><br>
                         <span style="font-size: 24px; color: #38bdf8; font-weight: bold;">${quarter_target:,.2f}</span><br>
                         <small style="color: #94a3b8;">預估季底波段潛在空間: +{((quarter_target - current_price)/current_price)*100:.1f}%</small>
                     </div>
@@ -410,7 +423,7 @@ if symbol:
               template="plotly_dark",
               paper_bgcolor="#0f172a",
               plot_bgcolor="#0b1120",
-              font=dict(color="#94a3b8"),
+              font=dict(color="#e2e8f0"),
           )
           st.plotly_chart(fig, use_container_width=True)
 
