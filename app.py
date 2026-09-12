@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（包含 Plotly 圖表工具列按鈕清晰度修復）
+# 注入高質感深色操盤室 CSS 樣式（包含 Plotly 圖表工具列深色化與清晰化）
 st.markdown(
     """
     <style>
@@ -53,11 +53,13 @@ st.markdown(
         color: #090d16 !important;
     }
     
-    /* 徹底修復 Plotly 圖表工具列 (Modebar) 按鈕與文字看不清的問題 */
+    /* 徹底將 Plotly 圖表工具列 (Modebar) 改為高質感深色風格與亮白字體 */
     .modebar {
-        background-color: rgba(30, 41, 59, 0.9) !important;
-        border-radius: 6px !important;
-        padding: 2px !important;
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+        border-radius: 8px !important;
+        padding: 4px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
     }
     .modebar-btn svg {
         fill: #ffffff !important;
@@ -65,7 +67,9 @@ st.markdown(
     .modebar-btn:hover svg {
         fill: #38bdf8 !important;
     }
-    .hovertext, .popover, div[class*="modebar"] {
+    /* Plotly 提示框與全螢幕浮動選單深色化 */
+    .hovertext, .popover, div[class*="modebar"], .js-plotly-plot .plotly .modebar-group {
+        background-color: #1e293b !important;
         color: #ffffff !important;
     }
     
