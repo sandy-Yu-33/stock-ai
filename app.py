@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（嚴格遵照：底色深藍色 #1e293b，圖標與文字黑色 #000000）
+# 注入高質感深色操盤室 CSS 樣式（終極強制將所有 Streamlit 選單與懸停框背景改為深藍，文字圖標全改黑字）
 st.markdown(
     """
     <style>
@@ -53,24 +53,27 @@ st.markdown(
         color: #090d16 !important;
     }
     
-    /* 嚴格執行您的要求：Plotly 工具列與懸停提示框底色改為深藍色，圖標與文字改為黑色 */
-    .modebar, div.modebar, .js-plotly-plot .plotly .modebar, .hovertext, .popover {
-        background-color: #1e293b !important;
-        border: 1px solid #38bdf8 !important;
-        border-radius: 8px !important;
-        padding: 4px !important;
-    }
-    
-    /* 強制將 Plotly 工具列內所有 SVG 圖標與文字填滿黑色 */
-    .modebar-btn path, div.modebar-btn path, .js-plotly-plot .plotly .modebar-btn path, .hovertext *, .popover * {
-        fill: #000000 !important;
+    /* 終極強制：將 Streamlit 右上角選單、彈出選單、懸停框背景全面改為深藍色，文字圖標全面改為黑色 */
+    div[data-baseweb="menu"], div[role="menu"], ul[role="menu"], .stMenu, [data-testid="stMainMenuPopover"], div[data-baseweb="popover"], .modebar, div.modebar, .hovertext {
+        background-color: #0f172a !important;
+        border: 2px solid #38bdf8 !important;
+        border-radius: 10px !important;
         color: #000000 !important;
     }
     
-    /* 針對懸停提示文字 (如 Fullscreen 等) 強制改為黑色字體 */
-    .hovertext text, .modebar-btn {
-        fill: #000000 !important;
+    /* 強制將選單與懸停提示中的所有文字、項目、說明改為醒目黑色（#000000）與粗體 */
+    div[data-baseweb="menu"] div, div[role="menu"] item, span, p, small, label, [data-testid="stMainMenuPopover"] span, [data-testid="stMainMenuPopover"] button, .hovertext text, .hovertext *, div[data-baseweb="popover"] * {
         color: #000000 !important;
+        fill: #000000 !important;
+        font-weight: 800 !important;
+    }
+    
+    /* Plotly 工具列與浮動按鈕圖標全面強制填滿黑色 */
+    .modebar-btn path, div.modebar-btn path, .js-plotly-plot .plotly .modebar-btn path {
+        fill: #000000 !important;
+    }
+    .modebar-btn:hover path, div.modebar-btn:hover path {
+        fill: #38bdf8 !important;
     }
 
     /* 下拉選單 (selectbox) 容器與按鈕深色優化 */
