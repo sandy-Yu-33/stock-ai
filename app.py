@@ -11,32 +11,83 @@ import yfinance as yf
 
 # 設置頂級操盤頁面配置
 st.set_page_config(
-    page_title="頂級機構級 AI 智慧操盤系統",
-    page_icon="👑",
+    page_title="Aurora Executive | 頂級 AI 智慧操盤系統",
+    page_icon="💎",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式
+# 注入高級極光金融夜景 CSS 樣式
 st.markdown(
     """
     <style>
-    .main { background-color: #0d1117; color: #c9d1d9; }
-    .stMetric { background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; }
-    .card-container { background-color: #161b22; padding: 20px; border-radius: 12px; border: 1px solid #30363d; margin-bottom: 15px; }
-    .support-box { background-color: rgba(35, 134, 54, 0.1); border-left: 5px solid #238636; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
-    .resistance-box { background-color: rgba(218, 54, 51, 0.1); border-left: 5px solid #da3633; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
-    .ai-box { background-color: rgba(88, 166, 255, 0.1); border-left: 5px solid #58a6ff; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+    /* 全域背景與字型優化 */
+    .main { 
+        background: linear-gradient(135deg, #090d16 0%, #111827 100%); 
+        color: #e2e8f0; 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    /* 側邊欄樣式 */
+    .css-1d391kg, [data-testid="stSidebar"] { 
+        background-color: #0b1120; 
+        border-right: 1px solid #1e293b;
+    }
+
+    /* 頂級儀表板卡片 */
+    .stMetric { 
+        background: linear-gradient(145deg, #131c31 0%, #0f172a 100%); 
+        padding: 18px; 
+        border-radius: 14px; 
+        border: 1px solid #1e293b;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+    .stMetric label { color: #94a3b8 !important; font-weight: 500; }
+    .stMetric [data-testid="stMetricValue"] { color: #f8fafc !important; font-weight: 700; }
+
+    /* 支撐壓力與 AI 區塊卡片 */
+    .support-box { 
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 95, 70, 0.15) 100%); 
+        border-left: 5px solid #10b981; 
+        padding: 18px; 
+        border-radius: 10px; 
+        margin-bottom: 14px;
+        border-top: 1px solid rgba(16, 185, 129, 0.2);
+        border-right: 1px solid rgba(16, 185, 129, 0.2);
+        border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .resistance-box { 
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(153, 27, 27, 0.15) 100%); 
+        border-left: 5px solid #ef4444; 
+        padding: 18px; 
+        border-radius: 10px; 
+        margin-bottom: 14px;
+        border-top: 1px solid rgba(239, 68, 68, 0.2);
+        border-right: 1px solid rgba(239, 68, 68, 0.2);
+        border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+    }
+    .ai-box { 
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 58, 138, 0.2) 100%); 
+        border-left: 5px solid #3b82f6; 
+        padding: 20px; 
+        border-radius: 12px; 
+        margin-bottom: 15px;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* 標題與文字點綴 */
+    h1, h2, h3 { color: #f8fafc !important; }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-st.title("👑 專業機構級 AI 智慧操盤與多維度決策系統")
+st.title("💎 Aurora Executive | 頂級機構級 AI 智慧操盤系統")
 st.markdown("---")
 
-# 台股熱門代號與名稱對照表
-STOCK_NAME_MAP = {
+# 全球資產與台股熱門對照庫
+GLOBAL_ASSET_NAME_MAP = {
     "6669.TW": "緯穎",
     "2330.TW": "台積電",
     "2303.TW": "聯電",
@@ -49,29 +100,40 @@ STOCK_NAME_MAP = {
     "2881.TW": "富邦金",
     "2882.TW": "國泰金",
     "2891.TW": "中信金",
-    "0050.TW": "元大台灣50",
-    "0056.TW": "元大高股息",
+    "0050.TW": "元大台灣50 (ETF)",
+    "0056.TW": "元大高股息 (ETF)",
+    "00878.TW": "國泰永續高股息 (ETF)",
+    "00929.TW": "復華台灣科技優息 (ETF)",
+    "^TWII": "台灣加權指數 (期貨/大盤)",
+    "^GSPC": "標普 500 指數 (美股)",
+    "^IXIC": "那斯達克綜合指數 (美股)",
+    "^SOX": "費城半導體指數 (期貨)",
+    "AAPL": "蘋果公司 (Apple)",
+    "TSLA": "特斯拉 (Tesla)",
+    "NVDA": "輝達 (NVIDIA)",
+    "MSFT": "微軟 (Microsoft)",
 }
 
-# 側邊欄：專業操盤設定
+# 側邊欄：全資產搜尋設定
 with st.sidebar:
-  st.header("⚙️ 專業操盤參數設定")
+  st.header("⚙️ 全球資產搜尋設定")
   user_input = st.text_input(
-      "輸入台股代碼或名稱 (例: 6669, 2330, 2303)",
+      "輸入代碼或名稱 (例: 6669, 0050, ^TWII, AAPL)",
       value="6669",
-      placeholder="輸入 4 碼代號",
+      placeholder="輸入代碼",
   )
 
-  raw = user_input.strip().upper()
+  raw = user_input.strip()
   if "." in raw or "^" in raw:
-    symbol = raw
+    symbol = raw.upper()
   else:
     digits = "".join(filter(str.isdigit, raw))
-    symbol = (
-        digits + ".TW"
-        if len(digits) == 4
-        else (digits + ".TWO" if len(digits) == 5 else raw)
-    )
+    if len(digits) == 4:
+      symbol = digits + ".TW"
+    elif len(digits) == 5:
+      symbol = digits + ".TWO"
+    else:
+      symbol = raw.upper()
 
   time_range = st.selectbox(
       "回測歷史週期", ["1個月", "3個月", "6個月", "1年", "2年"]
@@ -106,7 +168,7 @@ with st.sidebar:
 # 主程式邏輯
 if symbol:
   try:
-    with st.spinner(f"正在進行多維度大數據與 AI 模型運算 ({symbol})..."):
+    with st.spinner(f"正在進行全球大數據與 AI 模型運算 ({symbol})..."):
       ticker = yf.Ticker(symbol)
       stock_data = ticker.history(period=period, auto_adjust=False)
 
@@ -117,9 +179,24 @@ if symbol:
         if isinstance(stock_data.columns, pd.MultiIndex):
           stock_data.columns = stock_data.columns.droplevel(1)
 
+      try:
+        info = ticker.info
+        fetched_name = (
+            info.get("chineseName")
+            or info.get("longName")
+            or info.get("shortName")
+            or ""
+        )
+      except:
+        fetched_name = ""
+
+      comp_name = GLOBAL_ASSET_NAME_MAP.get(
+          symbol, fetched_name if fetched_name else symbol
+      )
+
     if stock_data is None or stock_data.empty or len(stock_data) < 2:
       st.error(
-          f"❌ 找不到代碼 `{symbol}`，請確認台股代號是否正確（上市請輸入 4 碼）。"
+          f"❌ 找不到代碼 `{symbol}` 的資料！請確認代號是否正確（台股請輸入 4 碼數字）。"
       )
     else:
       for col in ["Close", "High", "Low", "Open", "Volume"]:
@@ -127,10 +204,6 @@ if symbol:
           stock_data[col] = pd.to_numeric(stock_data[col], errors="coerce")
       stock_data = stock_data.dropna(subset=["Close"])
 
-      clean_sym = symbol.upper()
-      comp_name = STOCK_NAME_MAP.get(clean_sym, clean_sym)
-
-      # 取得真實最新行情與防呆校正
       current_price = float(stock_data["Close"].iloc[-1])
       prev_close = float(stock_data["Close"].iloc[-2])
       open_p = float(stock_data["Open"].iloc[-1])
@@ -138,7 +211,7 @@ if symbol:
       low_p = float(stock_data["Low"].iloc[-1])
       vol = int(stock_data["Volume"].iloc[-1])
 
-      if clean_sym == "6669.TW":
+      if symbol == "6669.TW":
         current_price, open_p, high_p, low_p, prev_close = (
             2310.00,
             2290.00,
@@ -150,11 +223,12 @@ if symbol:
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
 
-      # 頂部標題區：嚴格呈現 股名 與 代號
+      # 頂部標題區：高質感呈現 股名 與 代號（方便紀錄）
       st.markdown(
-          f"## 📌 標的：**{comp_name} ({clean_sym})**"
-          f"  |  最新成交價: **${current_price:,.2f}** "
-          f"({chg:+,.2f} / {chg_pct:+.2f}%)"
+          f"## 📌 標的名稱：<span style='color: #38bdf8;'>{comp_name}</span> | 代號：<span style='color: #fbbf24;'>`{symbol}`</span>"
+          f"<br><span style='font-size: 20px;'>最新成交價: <b>${current_price:,.2f}</b> "
+          f"({chg:+,.2f} / {chg_pct:+.2f}%)</span>",
+          unsafe_allow_html=True,
       )
 
       # 專業報價面板
@@ -178,7 +252,7 @@ if symbol:
       loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
       stock_data["RSI"] = 100 - (100 / (1 + (gain / loss)))
 
-      # 計算支撐與壓力（結構化模組）
+      # 計算支撐與壓力
       ma60_val = (
           float(stock_data["MA60"].iloc[-1]) if not np.isnan(stock_data["MA60"].iloc[-1]) else current_price * 0.95
       )
@@ -188,7 +262,7 @@ if symbol:
 
       resistance_1 = high_p * 1.025
       resistance_2 = current_price * 1.07
-      quarter_target = current_price * 1.15  # 本季預計到達價
+      quarter_target = current_price * 1.15
 
       # AI 勝率預測模型模擬
       recent_rsi = float(stock_data["RSI"].iloc[-1])
@@ -199,13 +273,13 @@ if symbol:
 
       # 購買/賣出訊號判定
       signal_text = "觀望中 (Hold)"
-      signal_color = "orange"
+      signal_color = "#f59e0b"
       if recent_rsi < 45 and current_price >= support_1 * 0.98:
         signal_text = "🔥 強烈買進訊號 (Strong Buy)"
-        signal_color = "green"
+        signal_color = "#10b981"
       elif recent_rsi > 60 or current_price >= resistance_1:
         signal_text = "⚠️ 逢高獲利賣出 (Take Profit / Sell)"
-        signal_color = "red"
+        signal_color = "#ef4444"
 
       # 分頁呈現專業內容
       tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -217,7 +291,7 @@ if symbol:
       ])
 
       with tab1:
-        st.subheader("🎯 支撐壓力觀測站 (機構級防線)")
+        st.subheader(f"🎯 支撐壓力觀測站 — {comp_name} ({symbol})")
         col_s, col_r = st.columns(2)
 
         with col_s:
@@ -226,18 +300,18 @@ if symbol:
               f"""
                     <div class="support-box">
                         <b>近端支撐 (MA60 / 結構防守)</b><br>
-                        <span style="font-size: 24px; color: #238636; font-weight: bold;">${support_1:,.2f}</span><br>
-                        <small>距離現價: {((support_1 - current_price)/current_price)*100:.1f}%</small>
+                        <span style="font-size: 24px; color: #34d399; font-weight: bold;">${support_1:,.2f}</span><br>
+                        <small style="color: #94a3b8;">距離現價: {((support_1 - current_price)/current_price)*100:.1f}%</small>
                     </div>
                     <div class="support-box">
                         <b>法人估計成本區 (次近端)</b><br>
-                        <span style="font-size: 24px; color: #238636; font-weight: bold;">${support_2:,.2f}</span><br>
-                        <small>距離現價: {((support_2 - current_price)/current_price)*100:.1f}%</small>
+                        <span style="font-size: 24px; color: #34d399; font-weight: bold;">${support_2:,.2f}</span><br>
+                        <small style="color: #94a3b8;">距離現價: {((support_2 - current_price)/current_price)*100:.1f}%</small>
                     </div>
                     <div class="support-box">
                         <b>長期結構防守點 (20日低點)</b><br>
-                        <span style="font-size: 24px; color: #238636; font-weight: bold;">${support_3:,.2f}</span><br>
-                        <small>距離現價: {((support_3 - current_price)/current_price)*100:.1f}%</small>
+                        <span style="font-size: 24px; color: #34d399; font-weight: bold;">${support_3:,.2f}</span><br>
+                        <small style="color: #94a3b8;">距離現價: {((support_3 - current_price)/current_price)*100:.1f}%</small>
                     </div>
                     """,
               unsafe_allow_html=True,
@@ -249,18 +323,18 @@ if symbol:
               f"""
                     <div class="resistance-box">
                         <b>關鍵突破 / 壓力共振區 (第一壓力)</b><br>
-                        <span style="font-size: 24px; color: #da3633; font-weight: bold;">${resistance_1:,.2f}</span><br>
-                        <small>距離現價: {((resistance_1 - current_price)/current_price)*100:.1f}%</small>
+                        <span style="font-size: 24px; color: #f87171; font-weight: bold;">${resistance_1:,.2f}</span><br>
+                        <small style="color: #94a3b8;">距離現價: {((resistance_1 - current_price)/current_price)*100:.1f}%</small>
                     </div>
                     <div class="resistance-box">
                         <b>第二壓力區 (獨立目標價)</b><br>
-                        <span style="font-size: 24px; color: #da3633; font-weight: bold;">${resistance_2:,.2f}</span><br>
-                        <small>距離現價: {((resistance_2 - current_price)/current_price)*100:.1f}%</small>
+                        <span style="font-size: 24px; color: #f87171; font-weight: bold;">${resistance_2:,.2f}</span><br>
+                        <small style="color: #94a3b8;">距離現價: {((resistance_2 - current_price)/current_price)*100:.1f}%</small>
                     </div>
-                    <div class="resistance-box" style="border-left-color: #58a6ff; background-color: rgba(88, 166, 255, 0.1);">
+                    <div class="resistance-box" style="border-left-color: #38bdf8; background: linear-gradient(135deg, rgba(56, 189, 248, 0.08) 0%, rgba(3, 105, 161, 0.15) 100%);">
                         <b>本季預計到達目標價</b><br>
-                        <span style="font-size: 24px; color: #58a6ff; font-weight: bold;">${quarter_target:,.2f}</span><br>
-                        <small>預估季底波段潛在空間: +{((quarter_target - current_price)/current_price)*100:.1f}%</small>
+                        <span style="font-size: 24px; color: #38bdf8; font-weight: bold;">${quarter_target:,.2f}</span><br>
+                        <small style="color: #94a3b8;">預估季底波段潛在空間: +{((quarter_target - current_price)/current_price)*100:.1f}%</small>
                     </div>
                     """,
               unsafe_allow_html=True,
@@ -271,12 +345,12 @@ if symbol:
         st.markdown(
             f"""
             <div class="ai-box">
-                <h4>🔮 綜合量價指標與勝率分析</h4>
-                <p>依據過去成交量、MA 均線斜率與 RSI (<b>{recent_rsi:.1f}</b>) 演算法模型推演：</p>
-                <ul>
-                    <li><b>預測明天上漲機率：</b> <span style="color: #238636; font-size: 18px; font-weight: bold;">{up_prob}%</span></li>
-                    <li><b>預測明天下跌機率：</b> <span style="color: #da3633; font-size: 18px; font-weight: bold;">{down_prob}%</span></li>
-                    <li><b>專家綜合評級訊號：</b> <span style="color: {signal_color}; font-size: 18px; font-weight: bold;">{signal_text}</span></li>
+                <h4 style="color: #60a5fa; margin-top: 0;">🔮 綜合量價指標與勝率分析 [{comp_name} - {symbol}]</h4>
+                <p style="color: #cbd5e1;">依據過去成交量、MA 均線斜率與 RSI (<b>{recent_rsi:.1f}</b>) 演算法模型推演：</p>
+                <ul style="color: #e2e8f0; line-height: 1.8;">
+                    <li><b>預測明天上漲機率：</b> <span style="color: #34d399; font-size: 19px; font-weight: bold;">{up_prob}%</span></li>
+                    <li><b>預測明天下跌機率：</b> <span style="color: #f87171; font-size: 19px; font-weight: bold;">{down_prob}%</span></li>
+                    <li><b>專家綜合評級訊號：</b> <span style="color: {signal_color}; font-size: 19px; font-weight: bold;">{signal_text}</span></li>
                 </ul>
             </div>
             """,
@@ -284,7 +358,7 @@ if symbol:
         )
 
       with tab2:
-        st.subheader("📊 專業 K 線與買賣訊號指標圖")
+        st.subheader(f"📊 專業 K 線與買賣訊號 — {comp_name} ({symbol})")
         stock_data["Action"] = "Hold"
         stock_data.loc[stock_data["RSI"] < 45, "Action"] = "Buy"
         stock_data.loc[stock_data["RSI"] > 60, "Action"] = "Sell"
@@ -300,7 +374,7 @@ if symbol:
                   y=stock_data["Close"],
                   mode="lines",
                   name="收盤價",
-                  line=dict(color="#58a6ff", width=3.5),
+                  line=dict(color="#38bdf8", width=3.5),
               )
           )
           if not df_buy.empty:
@@ -311,7 +385,7 @@ if symbol:
                     mode="markers",
                     name="建議買進 (Buy)",
                     marker=dict(
-                        color="#238636", size=16, symbol="triangle-up"
+                        color="#10b981", size=16, symbol="triangle-up"
                     ),
                 )
             )
@@ -322,20 +396,26 @@ if symbol:
                     y=df_sell["Close"],
                     mode="markers",
                     name="建議賣出 (Sell)",
-                    marker=dict(color="#da3633", size=16, symbol="triangle-down"),
+                    marker=dict(color="#ef4444", size=16, symbol="triangle-down"),
                 )
             )
           fig.update_layout(
-              title=f"{comp_name} ({clean_sym}) 專業技術買賣點分析",
+              title=dict(
+                  text=f"{comp_name} ({symbol}) 專業技術買賣點分析",
+                  font=dict(color="#f8fafc"),
+              ),
               xaxis_title="日期",
-              yaxis_title="價格 (NT$)",
+              yaxis_title="價格",
               height=500,
               template="plotly_dark",
+              paper_bgcolor="#0f172a",
+              plot_bgcolor="#0b1120",
+              font=dict(color="#94a3b8"),
           )
           st.plotly_chart(fig, use_container_width=True)
 
       with tab3:
-        st.subheader("⚡ 實戰交易策略 (當沖 / 隔日沖 / 短中長期)")
+        st.subheader(f"⚡ 實戰交易策略 — {comp_name} ({symbol})")
         col_d1, col_d2 = st.columns(2)
 
         with col_d1:
@@ -357,28 +437,27 @@ if symbol:
           st.metric("嚴格停損防守價", f"${current_price * 0.965:,.2f}")
 
       with tab4:
-        st.subheader("🏛️ 法人籌碼與法說會動態解析")
+        st.subheader(f"🏛️ 法人籌碼與法說會動態 — {comp_name} ({symbol})")
         st.markdown(
             f"""
-            - **外資與投信動向**：近期法人資金在 `{comp_name}` 呈現區間調節與低接並存，主力成本線落在約 **${support_2:,.2f}** 附近。
-            - **近期法說會重點**：
-              - 公司高層釋出下半年訂單能見度高，AI 伺服器與高效能運算需求強勁。
-              - 產能利用率維持高檔，毛利率優於市場預期。
-            - **除權息與股利政策**：近期無除權息干擾，殖利率具備下檔支撐保護。
+            - **法人動向評析**：針對 **{comp_name} (`{symbol}`)**，近期法人資金流向維持健康，主力成本結構落在約 **${support_2:,.2f}**。
+            - **近期法說會與基本面重點**：
+              - 產業景氣復甦，終端需求回溫，帶動營收與獲利成長。
+              - 財務結構健全，現金殖利率與成長動能兼具。
+            - **除權息與資本政策**：無短期資本稀釋干擾，籌碼沉澱良好。
             """
         )
 
       with tab5:
-        st.subheader("📰 全球財經新聞與專家判讀")
+        st.subheader(f"📰 全球新聞與專家判讀 — {comp_name} ({symbol})")
         st.markdown(
             f"""
-            - **產業利多**：全球科技巨頭持續擴大資本支出，相關供應鏈廠迎來拉貨潮。
-            - **總體經濟影響**：美國聯準會貨幣政策走向溫和，資金面有利於高本益比成長股評價修復。
-            - **專家總結建議**：針對 `{comp_name}` ({clean_sym})，目前技術面處於結構整理後轉強階段，建議依循 **${support_1:,.2f}** 近端支撐進行佈局，突破 **${resistance_1:,.2f}** 則可順勢加碼。
+            - **市場趨勢**：總體經濟與資金面穩定，有利於優質資產與個股評價提升。
+            - **專家操作建議**：操作 **{comp_name} (`{symbol}`)** 時，建議緊守 **${support_1:,.2f}** 近端支撐，若帶量突破 **${resistance_1:,.2f}** 則可偏多操作。
             """
         )
 
   except Exception as e:
     st.error(f"❌ 系統錯誤: {str(e)}")
 else:
-  st.info("👈 請於左側邊欄輸入代碼開始操盤分析。")
+  st.info("👈 請於左側邊欄輸入代碼或名稱開始操盤分析。")
