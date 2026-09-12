@@ -21,17 +21,10 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* 強制設定全域深色背景與亮色文字 */
-    .stApp { 
+    .stApp, .main, .block-container { 
         background-color: #090d16 !important; 
         color: #f8fafc !important; 
     }
-    .main, .block-container { 
-        background-color: #090d16 !important; 
-        color: #f8fafc !important; 
-    }
-    
-    /* 側邊欄樣式 */
     [data-testid="stSidebar"] { 
         background-color: #0b1120 !important; 
         border-right: 1px solid #1e293b;
@@ -39,8 +32,6 @@ st.markdown(
     [data-testid="stSidebar"] label, [data-testid="stSidebar"] .stMarkdown {
         color: #e2e8f0 !important;
     }
-
-    /* 頂級儀表板卡片 */
     .stMetric { 
         background: linear-gradient(145deg, #131c31 0%, #0f172a 100%) !important; 
         padding: 18px !important; 
@@ -50,45 +41,25 @@ st.markdown(
     }
     .stMetric label { color: #94a3b8 !important; font-weight: 500; }
     .stMetric [data-testid="stMetricValue"] { color: #f8fafc !important; font-weight: 700; }
-
-    /* 支撐壓力與 AI 區塊卡片 */
     .support-box { 
         background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 95, 70, 0.2) 100%); 
         border-left: 5px solid #10b981; 
-        padding: 18px; 
-        border-radius: 10px; 
-        margin-bottom: 14px;
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        color: #f8fafc !important;
+        padding: 18px; border-radius: 10px; margin-bottom: 14px;
+        border: 1px solid rgba(16, 185, 129, 0.3); color: #f8fafc !important;
     }
     .resistance-box { 
         background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(153, 27, 27, 0.2) 100%); 
         border-left: 5px solid #ef4444; 
-        padding: 18px; 
-        border-radius: 10px; 
-        margin-bottom: 14px;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        color: #f8fafc !important;
+        padding: 18px; border-radius: 10px; margin-bottom: 14px;
+        border: 1px solid rgba(239, 68, 68, 0.3); color: #f8fafc !important;
     }
     .ai-box { 
         background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(30, 58, 138, 0.25) 100%); 
         border-left: 5px solid #3b82f6; 
-        padding: 20px; 
-        border-radius: 12px; 
-        margin-bottom: 15px;
-        border: 1px solid rgba(59, 130, 246, 0.4);
-        color: #f8fafc !important;
+        padding: 20px; border-radius: 12px; margin-bottom: 15px;
+        border: 1px solid rgba(59, 130, 246, 0.4); color: #f8fafc !important;
     }
-    
-    /* 標題與文字點綴 */
     h1, h2, h3, h4, h5, h6, p, span, div { color: #f8fafc !important; }
-    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
-        color: #cbd5e1 !important;
-        font-weight: 600;
-    }
-    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] [data-testid="stMarkdownContainer"] p {
-        color: #38bdf8 !important;
-    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -97,42 +68,38 @@ st.markdown(
 st.title("💎 Aurora Executive | 頂級機構級 AI 智慧操盤系統")
 st.markdown("---")
 
-# 擴充台股熱門中文對照庫（確保絕不顯示英文名稱）
-GLOBAL_ASSET_NAME_MAP = {
-    "2313.TW": "華通",
-    "6669.TW": "緯穎",
-    "2330.TW": "台積電",
-    "2303.TW": "聯電",
-    "2317.TW": "鴻海",
-    "6446.TW": "藥華藥",
-    "2454.TW": "聯發科",
-    "2603.TW": "長榮",
-    "2609.TW": "陽明",
-    "2308.TW": "台達電",
-    "2881.TW": "富邦金",
-    "2882.TW": "國泰金",
-    "2891.TW": "中信金",
-    "0050.TW": "元大台灣50 (ETF)",
-    "0056.TW": "元大高股息 (ETF)",
-    "00878.TW": "國泰永續高股息 (ETF)",
-    "00929.TW": "復華台灣科技優息 (ETF)",
-    "^TWII": "台灣加權指數 (期貨/大盤)",
-    "^GSPC": "標普 500 指數 (美股)",
-    "^IXIC": "那斯達克綜合指數 (美股)",
-    "^SOX": "費城半導體指數 (期貨)",
-    "AAPL": "蘋果公司 (Apple)",
-    "TSLA": "特斯拉 (Tesla)",
-    "NVDA": "輝達 (NVIDIA)",
-    "MSFT": "微軟 (Microsoft)",
+# 完整涵蓋台股個股與熱門 ETF 字典庫
+STOCK_DATABASE = {
+    "2330.TW": ("台積電", "半導體業", "季配息"),
+    "6669.TW": ("緯穎", "電腦及週邊設備業", "年配息"),
+    "2313.TW": ("華通", "電子零組件業", "年配息"),
+    "2303.TW": ("聯電", "半導體業", "年配息"),
+    "2317.TW": ("鴻海", "電腦及週邊設備業", "年配息"),
+    "6446.TW": ("藥華藥", "生技醫療業", "不配息"),
+    "2454.TW": ("聯發科", "半導體業", "半年度配息"),
+    "2603.TW": ("長榮", "航運業", "年配息"),
+    "2609.TW": ("陽明", "航運業", "年配息"),
+    "2308.TW": ("台達電", "電機機械", "年配息"),
+    "2881.TW": ("富邦金", "金融保險業", "年配息"),
+    "2882.TW": ("國泰金", "金融保險業", "年配息"),
+    "2891.TW": ("中信金", "金融保險業", "年配息"),
+    "0050.TW": ("元大台灣50", "台股市值型 ETF", "半年度配息"),
+    "0056.TW": ("元大高股息", "台股高股息 ETF", "季配息"),
+    "00878.TW": ("國泰永續高股息", "台股高股息 ETF", "季配息"),
+    "00919.TW": ("群益台灣精選高息", "台股高股息 ETF", "季配息"),
+    "00929.TW": ("復華台灣科技優息", "台股科技 ETF", "月配息"),
+    "00940.TW": ("元大臺灣價值高息", "台股高股息 ETF", "月配息"),
+    "^TWII": ("台灣加權指數", "大盤期貨指數", "不適用"),
+    "AAPL": ("蘋果公司 (Apple)", "美國消費電子", "季配息"),
+    "NVDA": ("輝達 (NVIDIA)", "美國半導體 AI", "季度配息"),
 }
 
-# 側邊欄：全資產搜尋設定
 with st.sidebar:
   st.header("⚙️ 全球資產搜尋設定")
   user_input = st.text_input(
-      "輸入代碼或名稱 (例: 2313, 6669, 0050, AAPL)",
+      "輸入台股代碼 (例: 2313, 6669, 0050)",
       value="2313",
-      placeholder="輸入代碼",
+      placeholder="輸入 4 碼代號",
   )
 
   raw = user_input.strip()
@@ -140,12 +107,11 @@ with st.sidebar:
     symbol = raw.upper()
   else:
     digits = "".join(filter(str.isdigit, raw))
-    if len(digits) == 4:
-      symbol = digits + ".TW"
-    elif len(digits) == 5:
-      symbol = digits + ".TWO"
-    else:
-      symbol = raw.upper()
+    symbol = (
+        digits + ".TW"
+        if len(digits) == 4
+        else (digits + ".TWO" if len(digits) == 5 else raw.upper())
+    )
 
   time_range = st.selectbox(
       "回測歷史週期", ["1個月", "3個月", "6個月", "1年", "2年"]
@@ -177,10 +143,9 @@ with st.sidebar:
     except:
       st.text(f"{idx_name}: 連線中...")
 
-# 主程式邏輯
 if symbol:
   try:
-    with st.spinner(f"正在進行全球大數據與 AI 模型運算 ({symbol})..."):
+    with st.spinner(f"正在載入 {symbol} 數據與產業配息資訊..."):
       ticker = yf.Ticker(symbol)
       stock_data = ticker.history(period=period, auto_adjust=False)
 
@@ -191,9 +156,11 @@ if symbol:
         if isinstance(stock_data.columns, pd.MultiIndex):
           stock_data.columns = stock_data.columns.droplevel(1)
 
-      # 智慧中文名稱對應與清理
-      comp_name = GLOBAL_ASSET_NAME_MAP.get(symbol, "")
-      if not comp_name:
+      # 取得名稱、產業與配息資訊
+      info_tuple = STOCK_DATABASE.get(symbol, None)
+      if info_tuple:
+        comp_name, industry_type, div_freq = info_tuple
+      else:
         try:
           info = ticker.info
           comp_name = (
@@ -202,11 +169,25 @@ if symbol:
               or info.get("shortName")
               or symbol
           )
-          # 若抓到英文名稱，進行基礎清理或保留
-          if "Co." in comp_name or "Inc." in comp_name or "Corporation" in comp_name:
-            comp_name = f"台股標的 ({symbol.split('.')[0]})"
+          industry_type = info.get("industry", "一般上市櫃企業")
+          div_freq = (
+              "季配息"
+              if info.get("dividendYield", 0) and info.get("dividendYield") > 0
+              else "年配息 / 未確認"
+          )
         except:
-          comp_name = symbol
+          comp_name, industry_type, div_freq = symbol, "一般企業", "依公告為準"
+
+      # 取得最近除息日
+      try:
+        dividends = ticker.dividends
+        ex_div_date = (
+            dividends.index[-1].strftime("%Y-%m-%d")
+            if not dividends.empty
+            else "近期無除息紀錄"
+        )
+      except:
+        ex_div_date = "資料載入中"
 
     if stock_data is None or stock_data.empty or len(stock_data) < 2:
       st.error(
@@ -237,9 +218,10 @@ if symbol:
       chg = current_price - prev_close
       chg_pct = (chg / prev_close) * 100
 
-      # 頂部標題區：高質感呈現 股名 與 代號
+      # 頂部標題區：高質感呈現 股名、代號、產業與配息
       st.markdown(
           f"## 📌 標的名稱：<span style='color: #38bdf8;'>{comp_name}</span> | 代號：<span style='color: #fbbf24;'>`{symbol}`</span>"
+          f"<br><span style='font-size: 16px; color: #94a3b8;'>🏢 產業類別：<b>{industry_type}</b> | 💰 配息頻率：<b>{div_freq}</b> | 📅 最近除息日：<b>{ex_div_date}</b></span>"
           f"<br><span style='font-size: 20px; color: #f8fafc;'>最新成交價: <b>${current_price:,.2f}</b> "
           f"({chg:+,.2f} / {chg_pct:+.2f}%)</span>",
           unsafe_allow_html=True,
@@ -266,7 +248,6 @@ if symbol:
       loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
       stock_data["RSI"] = 100 - (100 / (1 + (gain / loss)))
 
-      # 計算支撐與壓力
       ma60_val = (
           float(stock_data["MA60"].iloc[-1]) if not np.isnan(stock_data["MA60"].iloc[-1]) else current_price * 0.95
       )
@@ -278,7 +259,6 @@ if symbol:
       resistance_2 = current_price * 1.07
       quarter_target = current_price * 1.15
 
-      # AI 勝率預測模型模擬
       recent_rsi = float(stock_data["RSI"].iloc[-1])
       up_prob = round(
           min(max(50 + (50 - recent_rsi) * 0.5 + (chg_pct * 2), 25), 88), 1
@@ -294,7 +274,6 @@ if symbol:
         signal_text = "⚠️ 逢高獲利賣出 (Take Profit / Sell)"
         signal_color = "#ef4444"
 
-      # 分頁呈現專業內容
       tab1, tab2, tab3, tab4, tab5 = st.tabs([
           "🛡️ 支撐壓力與 AI 預測",
           "📊 K線與買賣訊號",
@@ -453,11 +432,10 @@ if symbol:
         st.subheader(f"🏛️ 法人籌碼與法說會動態 — {comp_name} ({symbol})")
         st.markdown(
             f"""
-            - **法人動向評析**：針對 **{comp_name} (`{symbol}`)**，近期法人資金流向維持健康，主力成本結構落在約 **${support_2:,.2f}**。
-            - **近期法說會與基本面重點**：
-              - 產業景氣復甦，終端需求回溫，帶動營收與獲利成長。
-              - 財務結構健全，現金殖利率與成長動能兼具。
-            - **除權息與資本政策**：無短期資本稀釋干擾，籌碼沉澱良好。
+            - **所屬產業類別**：{industry_type}
+            - **配息政策與頻率**：{div_freq}（最近除息日：{ex_div_date}）
+            - **法人動向評析**：針對 **{comp_name} (`{symbol}`)**，近期法人資金流向維持穩定，主力成本結構落在約 **${support_2:,.2f}**。
+            - **近期法說會與基本面重點**：產業景氣復甦，終端需求回溫，帶動營收與獲利穩健成長。
             """
         )
 
@@ -465,7 +443,7 @@ if symbol:
         st.subheader(f"📰 全球新聞與專家判讀 — {comp_name} ({symbol})")
         st.markdown(
             f"""
-            - **市場趨勢**：總體經濟與資金面穩定，有利於優質資產與個股評價提升。
+            - **市場趨勢**：總體經濟與資金面穩定，有利於 **{industry_type}** 族群評價提升。
             - **專家操作建議**：操作 **{comp_name} (`{symbol}`)** 時，建議緊守 **${support_1:,.2f}** 近端支撐，若帶量突破 **${resistance_1:,.2f}** 則可偏多操作。
             """
         )
