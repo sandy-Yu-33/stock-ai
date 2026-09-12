@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（保留表格工具列，強制底色深藍、圖標與文字改為黑色/亮藍）
+# 注入高質感深色操盤室 CSS 樣式（終極強制將右上角彈出選單底色改為深藍，文字與圖標改為黑字）
 st.markdown(
     """
     <style>
@@ -53,30 +53,26 @@ st.markdown(
         color: #090d16 !important;
     }
     
-    /* 完整保留表格右上角工具列，並將背景強制改為深藍色 (#1e293b)，圖標與文字強制改為黑色 (#000000) */
-    div.stDataFrame [data-testid="stElementToolbar"], .modebar, div.modebar, .js-plotly-plot .plotly .modebar {
+    /* 終極精準鎖定右上角點開後的彈出選單 (Popover / Menu) */
+    div[data-baseweb="popover"], div[data-baseweb="menu"], div[role="menu"], ul[role="menu"], [data-testid="stMainMenuPopover"] {
+        background-color: #0f172a !important;
+        border: 2px solid #38bdf8 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8) !important;
+    }
+    
+    /* 強制將彈出選單內所有原本看不到的文字 (Rerun, Clear cache, Print 等) 變成清晰的黑色 (#000000) 與粗體 */
+    div[data-baseweb="popover"] *, div[data-baseweb="menu"] *, [data-testid="stMainMenuPopover"] *, div[role="menu"] * {
+        color: #000000 !important;
+        fill: #000000 !important;
+        font-weight: 800 !important;
+    }
+    
+    /* 保持右上角工具列按鈕本身的深藍底與邊框質感 */
+    header [data-testid="stToolbar"] {
         background-color: #1e293b !important;
-        border: 1px solid #38bdf8 !important;
         border-radius: 8px !important;
         padding: 4px !important;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6) !important;
-        display: flex !important;
-        visibility: visible !important;
-    }
-    
-    /* 表格工具列內的圖標與按鈕 SVG 強制改為黑色 */
-    div.stDataFrame [data-testid="stElementToolbar"] button svg, div.stDataFrame [data-testid="stElementToolbar"] svg {
-        fill: #000000 !important;
-        color: #000000 !important;
-    }
-    div.stDataFrame [data-testid="stElementToolbar"] button:hover svg {
-        fill: #38bdf8 !important;
-    }
-    
-    /* 表格深色質感優化 */
-    [data-testid="stDataFrame"] {
-        border: 1px solid #1e293b !important;
-        border-radius: 10px !important;
     }
 
     /* 下拉選單 (selectbox) 容器與按鈕深色優化 */
@@ -91,18 +87,8 @@ st.markdown(
     }
     
     /* 下拉彈出選單背景深色化與清晰白字修復 */
-    div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"], div[role="listbox"] {
-        background-color: #131c31 !important;
-        border: 1px solid #334155 !important;
-    }
-    div[data-baseweb="popover"] div, div[data-baseweb="menu"] div, span[role="option"], li[role="option"], div[role="option"] {
+    div[data-baseweb="popover"] div[data-baseweb="select"] span, ul[role="listbox"] span {
         color: #ffffff !important;
-        background-color: #131c31 !important;
-        font-weight: 600 !important;
-    }
-    li[role="option"]:hover, div[role="option"]:hover {
-        background-color: #38bdf8 !important;
-        color: #090d16 !important;
     }
 
     .stMetric { 
