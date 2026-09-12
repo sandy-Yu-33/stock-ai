@@ -65,12 +65,49 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# 初始化 Session State 用於自選股
+# 初始化 Session State 自選股
 if "watchlist" not in st.session_state:
-  st.session_state["watchlist"] = ["2330.TW", "6669.TW", "2313.TW"]
+  st.session_state["watchlist"] = ["2330.TW", "6669.TW", "0050.TW", "00878.TW"]
 
-st.title("👑 Aurora Executive | 全市場 AI 智慧操盤旗艦系統")
+st.title("👑 Aurora Executive | 全市場全股票 AI 智慧操盤旗艦系統")
 st.markdown("---")
+
+# 巨量全台股與熱門 ETF 中文名稱對照庫
+FULL_STOCK_DATABASE = {
+    # 權值與熱門個股
+    "2330": ("台積電", "半導體業", "季配息"),
+    "6669": ("緯穎", "電腦及週邊設備業", "年配息"),
+    "2313": ("華通", "電子零組件業", "年配息"),
+    "2303": ("聯電", "半導體業", "年配息"),
+    "2317": ("鴻海", "電腦及週邊設備業", "年配息"),
+    "2454": ("聯發科", "半導體業", "半年度配息"),
+    "2308": ("台達電", "電機機械", "年配息"),
+    "2881": ("富邦金", "金融保險業", "年配息"),
+    "2882": ("國泰金", "金融保險業", "年配息"),
+    "2891": ("中信金", "金融保險業", "年配息"),
+    "2603": ("長榮", "航運業", "年配息"),
+    "2609": ("陽明", "航運業", "年配息"),
+    "6446": ("藥華藥", "生技醫療業", "不配息"),
+    "3231": ("緯創", "電腦及週邊設備業", "年配息"),
+    "2382": ("廣達", "電腦及週邊設備業", "年配息"),
+    "3037": ("欣興", "電子零組件業", "年配息"),
+    "3711": ("日月光投控", "半導體業", "年配息"),
+    # 熱門 ETF 大全
+    "0050": ("元大台灣50", "台股市值型 ETF", "半年度配息"),
+    "0056": ("元大高股息", "台股高股息 ETF", "季配息"),
+    "00878": ("國泰永續高股息", "台股高股息 ETF", "季配息"),
+    "00919": ("群益台灣精選高息", "台股高股息 ETF", "季配息"),
+    "00929": ("復華台灣科技優息", "台股科技 ETF", "月配息"),
+    "00940": ("元大臺灣價值高息", "台股高股息 ETF", "月配息"),
+    "00939": ("統一台灣高息動能", "台股高股息 ETF", "月配息"),
+    "00713": ("元大台灣高息低波", "台股高股息 ETF", "季配息"),
+    "00922": ("國泰台灣領袖50", "台股市值型 ETF", "半年度配息"),
+    "006208": ("富邦台50", "台股市值型 ETF", "年度配息"),
+    "00881": ("國泰台灣5G+ ", "台股科技 ETF", "年度配息"),
+    "00935": ("野村台灣新科技50", "台股科技 ETF", "年度配息"),
+    # 大盤指數
+    "^TWII": ("台灣加權指數", "大盤期貨指數", "不適用"),
+}
 
 # 側邊欄導覽
 with st.sidebar:
@@ -82,11 +119,11 @@ with st.sidebar:
 
   st.markdown("---")
   if app_mode == "📊 個股深度分析":
-    st.header("⚙️ 股票代碼搜尋")
+    st.header("⚙️ 股票與 ETF 搜尋")
     user_input = st.text_input(
-        "輸入台股代碼 (例: 2330, 2313, 6669)",
+        "輸入台股代碼或 ETF (例: 2330, 0050, 00878)",
         value="2330",
-        placeholder="輸入 4 碼代號",
+        placeholder="輸入 4 或 5 碼代號",
     )
     raw = user_input.strip()
     if "." in raw or "^" in raw:
@@ -146,17 +183,17 @@ if app_mode == "🤖 AI 智能選股中心":
   ])
 
   with tab_ai1:
-    st.subheader("🚀 今日 AI 預測看漲強勢股")
+    st.subheader("🚀 今日 AI 預測看漲強勢股與 ETF")
     bullish_df = pd.DataFrame({
-        "代號": ["2330.TW", "6669.TW", "2454.TW", "2317.TW"],
-        "名稱": ["台積電", "緯穎", "聯發科", "鴻海"],
-        "現價": [950.0, 2310.0, 1250.0, 185.0],
-        "預測上漲機率": ["78%", "75%", "72%", "68%"],
+        "代號": ["2330.TW", "00878.TW", "6669.TW", "0050.TW"],
+        "名稱": ["台積電", "國泰永續高股息", "緯穎", "元大台灣50"],
+        "現價": [950.0, 22.8, 2310.0, 182.0],
+        "預測上漲機率": ["78%", "76%", "75%", "70%"],
         "推薦理由": [
             "外資連續買超，MACD黃金交叉",
+            "除息前夕買盤湧入，殖利率具防守性",
             "尾盤帶量上拉，季線強支撐",
-            "AI晶片題材發酵，成交量放大",
-            "籌碼沉澱，投信積極佈局",
+            "權值股帶動大盤，資金持續匯聚",
         ],
     })
     st.dataframe(bullish_df, use_container_width=True)
@@ -178,10 +215,10 @@ if app_mode == "🤖 AI 智能選股中心":
   with tab_ai3:
     st.subheader("⚡ 突破季線 / 創高強勢訊號")
     breakout_df = pd.DataFrame({
-        "代號": ["6669.TW", "3231.TW"],
-        "名稱": ["緯穎", "緯創"],
-        "突破類型": ["帶量突破前高", "MA20/MA60 黃金交叉"],
-        "成交量增幅": ["+145%", "+112%"],
+        "代號": ["6669.TW", "00919.TW"],
+        "名稱": ["緯穎", "群益台灣精選高息"],
+        "突破類型": ["帶量突破前高", "月線帶量翻揚"],
+        "成交量增幅": ["+145%", "+128%"],
     })
     st.dataframe(breakout_df, use_container_width=True)
 
@@ -192,12 +229,18 @@ if app_mode == "🤖 AI 智能選股中心":
         "標的": [
             "緯穎 (6669.TW)",
             "台積電 (2330.TW)",
+            "國泰永續高股息 (00878.TW)",
+            "元大台灣50 (0050.TW)",
             "聯發科 (2454.TW)",
-            "鴻海 (2317.TW)",
-            "華通 (2313.TW)",
         ],
-        "AI 綜合評分": [94.5, 91.2, 88.6, 85.0, 82.4],
-        "籌碼評級": ["🟢 強勢多方", "🟢 多方", "🟢 多方", "🟡 中性偏多", "🟢 多方"],
+        "AI 綜合評分": [94.5, 92.1, 89.4, 87.2, 85.0],
+        "籌碼評級": [
+            "🟢 強勢多方",
+            "🟢 多方",
+            "🟢 強勢多方",
+            "🟢 多方",
+            "🟢 多方",
+        ],
     })
     st.dataframe(ranking_df, use_container_width=True)
 
@@ -205,13 +248,13 @@ if app_mode == "🤖 AI 智能選股中心":
 # 模組二：我的自選股
 # -------------------------------------------------------------------------
 elif app_mode == "⭐ 我的自選股":
-  st.header("⭐ 個人操盤自選股清單")
+  st.header("⭐ 個人操盤自選股與 ETF 清單")
   st.markdown("管理您長期追蹤與記錄的投資組合。")
 
   col_add, col_del = st.columns([3, 1])
   with col_add:
     new_stock = st.text_input(
-        "新增自選股代號 (例: 2317.TW, 2454.TW)", placeholder="輸入完整代號"
+        "新增自選股代號 (例: 2317.TW, 00878.TW)", placeholder="輸入完整代號"
     )
   with col_del:
     st.write("")
@@ -232,8 +275,15 @@ elif app_mode == "⭐ 我的自選股":
         p_p = float(hist["Close"].iloc[-2])
         chg = c_p - p_p
         chg_p = (chg / p_p) * 100
+        clean_d = "".join(filter(str.isdigit, s))
+        c_name = (
+            FULL_STOCK_DATABASE.get(clean_d, (s, "", ""))[0]
+            if clean_d in FULL_STOCK_DATABASE
+            else s
+        )
         watchlist_data.append({
             "代號": s,
+            "名稱": c_name,
             "最新收盤價": f"${c_p:,.2f}",
             "漲跌金額": f"{chg:+,.2f}",
             "漲跌幅": f"{chg_p:+.2f}%",
@@ -269,15 +319,28 @@ elif app_mode == "📊 個股深度分析":
           if isinstance(stock_data.columns, pd.MultiIndex):
             stock_data.columns = stock_data.columns.droplevel(1)
 
+        # 智慧中文名稱對應
+        clean_digits = "".join(filter(str.isdigit, symbol))
+        if clean_digits in FULL_STOCK_DATABASE:
+          comp_name, industry_type, div_freq = FULL_STOCK_DATABASE[
+              clean_digits
+          ]
+        else:
+          try:
+            info = ticker.info
+            comp_name = (
+                info.get("chineseName")
+                or info.get("longName")
+                or info.get("shortName")
+                or symbol
+            )
+            industry_type = info.get("industry", "台灣上市櫃企業")
+            div_freq = "依公告為準"
+          except:
+            comp_name, industry_type, div_freq = symbol, "一般企業", "依公告為準"
+
         try:
           info = ticker.info
-          comp_name = (
-              info.get("chineseName")
-              or info.get("longName")
-              or info.get("shortName")
-              or symbol
-          )
-          industry_type = info.get("industry", "台灣上市櫃企業")
           pe_ratio = info.get("trailingPE", 18.5)
           div_yield = (
               round(info.get("dividendYield", 0.03) * 100, 2)
@@ -288,17 +351,13 @@ elif app_mode == "📊 個股深度分析":
           revenue_growth = "+15.2%"
           gross_margin = "28.5%"
         except:
-          comp_name, industry_type, pe_ratio, div_yield, eps_val = (
-              symbol,
-              "一般企業",
-              18.5,
-              3.2,
-              8.5,
-          )
+          pe_ratio, div_yield, eps_val = 18.5, 3.2, 8.5
           revenue_growth, gross_margin = "+15.2%", "28.5%"
 
       if stock_data is None or stock_data.empty or len(stock_data) < 2:
-        st.error(f"❌ 找不到代碼 `{symbol}` 的資料！")
+        st.error(
+            f"❌ 找不到代碼 `{symbol}` 的資料！請確認台股代號是否正確（上市請輸入 4 碼，上櫃請輸入 5 碼）。"
+        )
       else:
         for col in ["Close", "High", "Low", "Open", "Volume"]:
           if col in stock_data.columns:
@@ -324,12 +383,12 @@ elif app_mode == "📊 個股深度分析":
         chg = current_price - prev_close
         chg_pct = (chg / prev_close) * 100
 
-        # 自選股加入按鈕
+        # 頂部標題區與自選股按鈕
         col_t1, col_t2 = st.columns([4, 1])
         with col_t1:
           st.markdown(
               f"## 📌 標的名稱：<span style='color: #38bdf8;'>{comp_name}</span> | 代號：<span style='color: #fbbf24;'>`{symbol}`</span>"
-              f"<br><span style='font-size: 15px; color: #94a3b8;'>🏢 產業：<b>{industry_type}</b> | 📊 本益比(P/E)：<b>{pe_ratio}</b> | 📈 殖利率：<b>{div_yield}%</b> | 💵 EPS：<b>{eps_val}</b></span>"
+              f"<br><span style='font-size: 15px; color: #94a3b8;'>🏢 產業：<b>{industry_type}</b> | 💰 配息：<b>{div_freq}</b> | 📊 本益比(P/E)：<b>{pe_ratio}</b> | 📈 殖利率：<b>{div_yield}%</b> | 💵 EPS：<b>{eps_val}</b></span>"
               f"<br><span style='font-size: 20px; color: #f8fafc;'>最新成交價: <b>${current_price:,.2f}</b> "
               f"({chg:+,.2f} / {chg_pct:+.2f}%)</span>",
               unsafe_allow_html=True,
