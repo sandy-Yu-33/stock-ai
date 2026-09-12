@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（嚴格遵照您的指示：底色深藍色，圖標與文字黑色）
+# 注入高質感深色操盤室 CSS 樣式（嚴格遵照：底色深藍色 #1e293b，圖標與文字黑色 #000000）
 st.markdown(
     """
     <style>
@@ -53,25 +53,24 @@ st.markdown(
         color: #090d16 !important;
     }
     
-    /* 嚴格執行您的指示：選單與工具列底色深藍色 (#1e293b / #131c31)，圖標與文字黑色 (#000000) */
-    div[data-baseweb="menu"], div[role="menu"], ul[role="menu"], .stMenu, [data-testid="stMainMenuPopover"], div[data-baseweb="popover"], .modebar, div.modebar {
+    /* 嚴格執行您的要求：Plotly 工具列與懸停提示框底色改為深藍色，圖標與文字改為黑色 */
+    .modebar, div.modebar, .js-plotly-plot .plotly .modebar, .hovertext, .popover {
         background-color: #1e293b !important;
-        border: 2px solid #38bdf8 !important;
+        border: 1px solid #38bdf8 !important;
         border-radius: 8px !important;
+        padding: 4px !important;
     }
     
-    /* 強制將選單內所有文字、項目、說明改為黑字或極深色，確保在深藍/白底上清晰可見 */
-    div[data-baseweb="menu"] div, div[role="menu"] item, span, p, small, label, [data-testid="stMainMenuPopover"] span, [data-testid="stMainMenuPopover"] button {
-        color: #000000 !important;
-        font-weight: 700 !important;
-    }
-    
-    /* Plotly 工具列按鈕圖標強制改為黑色 */
-    .modebar-btn path, div.modebar-btn path, .js-plotly-plot .plotly .modebar-btn path {
+    /* 強制將 Plotly 工具列內所有 SVG 圖標與文字填滿黑色 */
+    .modebar-btn path, div.modebar-btn path, .js-plotly-plot .plotly .modebar-btn path, .hovertext *, .popover * {
         fill: #000000 !important;
+        color: #000000 !important;
     }
-    .modebar-btn:hover path, div.modebar-btn:hover path {
-        fill: #38bdf8 !important;
+    
+    /* 針對懸停提示文字 (如 Fullscreen 等) 強制改為黑色字體 */
+    .hovertext text, .modebar-btn {
+        fill: #000000 !important;
+        color: #000000 !important;
     }
 
     /* 下拉選單 (selectbox) 容器與按鈕深色優化 */
