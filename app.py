@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（完全依照您的截圖：工具列純白底，圖標與邊框黑色）
+# 注入高質感深色操盤室 CSS 樣式（完美修正圖標方塊問題，保持白底黑線條圖標）
 st.markdown(
     """
     <style>
@@ -53,7 +53,7 @@ st.markdown(
         color: #090d16 !important;
     }
     
-    /* 完美對齊您的截圖：表格右上角工具列背景強制改為純白色，邊框與圖標改為黑色 */
+    /* 表格右上角工具列背景為乾淨白色，外框科技藍 */
     div.stDataFrame [data-testid="stElementToolbar"], .modebar, div.modebar {
         background-color: #ffffff !important;
         border: 2px solid #38bdf8 !important;
@@ -62,15 +62,16 @@ st.markdown(
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6) !important;
     }
     
-    /* 將工具列內所有按鈕背景清空、圖標 SVG 強制填滿黑色 */
+    /* 讓工具列按鈕與圖標完美呈現黑色線條，絕不變成方塊 */
     div.stDataFrame [data-testid="stElementToolbar"] button {
         background-color: transparent !important;
     }
-    div.stDataFrame [data-testid="stElementToolbar"] svg, div.stDataFrame [data-testid="stElementToolbar"] path {
-        fill: #000000 !important;
+    div.stDataFrame [data-testid="stElementToolbar"] svg {
         color: #000000 !important;
+        fill: #000000 !important;
     }
-    div.stDataFrame [data-testid="stElementToolbar"] button:hover svg, div.stDataFrame [data-testid="stElementToolbar"] button:hover path {
+    div.stDataFrame [data-testid="stElementToolbar"] button:hover svg {
+        color: #38bdf8 !important;
         fill: #38bdf8 !important;
     }
     
