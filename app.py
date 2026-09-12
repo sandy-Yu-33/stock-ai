@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式
+# 注入高質感深色操盤室 CSS 樣式（包含 Plotly 圖表工具列按鈕清晰度修復）
 st.markdown(
     """
     <style>
@@ -51,6 +51,22 @@ st.markdown(
     header [data-testid="collapsedControl"]:hover svg, button[kind="header"]:hover svg {
         fill: #090d16 !important;
         color: #090d16 !important;
+    }
+    
+    /* 徹底修復 Plotly 圖表工具列 (Modebar) 按鈕與文字看不清的問題 */
+    .modebar {
+        background-color: rgba(30, 41, 59, 0.9) !important;
+        border-radius: 6px !important;
+        padding: 2px !important;
+    }
+    .modebar-btn svg {
+        fill: #ffffff !important;
+    }
+    .modebar-btn:hover svg {
+        fill: #38bdf8 !important;
+    }
+    .hovertext, .popover, div[class*="modebar"] {
+        color: #ffffff !important;
     }
     
     /* 下拉選單 (selectbox) 容器與按鈕深色優化 */
