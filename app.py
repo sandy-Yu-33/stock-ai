@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（包含側邊欄收合按鈕顏色優化）
+# 注入高質感深色操盤室 CSS 樣式（完美修復側邊欄收合按鈕視覺效果）
 st.markdown(
     """
     <style>
@@ -33,15 +33,27 @@ st.markdown(
         color: #e2e8f0 !important;
     }
     
-    /* 側邊欄收合按鈕 (Collapse / Expand button) 顏色美化與高對比修復 */
-    button[kind="header"], [data-testid="stSidebarNav"] button, button[data-testid="baseButton-header"] {
+    /* 強效修復側邊欄收合/展開按鈕 (Sidebar Collapse Button) */
+    button[kind="header"], [data-testid="stSidebarNav"] button, button[data-testid="baseButton-header"], [data-testid="collapsedControl"] {
         background-color: #1e293b !important;
         color: #38bdf8 !important;
-        border: 1px solid #475569 !important;
+        border: 2px solid #38bdf8 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
     }
-    button[kind="header"] svg, [data-testid="stSidebarNav"] button svg, button[data-testid="baseButton-header"] svg {
+    button[kind="header"] svg, [data-testid="stSidebarNav"] button svg, button[data-testid="baseButton-header"] svg, [data-testid="collapsedControl"] svg {
         fill: #38bdf8 !important;
         color: #38bdf8 !important;
+        filter: drop-shadow(0px 0px 2px rgba(56, 189, 248, 0.8)) !important;
+    }
+    button[kind="header"]:hover, [data-testid="collapsedControl"]:hover {
+        background-color: #38bdf8 !important;
+        border-color: #ffffff !important;
+    }
+    button[kind="header"]:hover svg, [data-testid="collapsedControl"]:hover svg {
+        fill: #090d16 !important;
+        color: #090d16 !important;
+        filter: none !important;
     }
     
     /* 下拉選單 (selectbox) 容器與按鈕深色優化 */
