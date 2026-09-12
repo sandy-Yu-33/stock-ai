@@ -67,14 +67,18 @@ st.markdown(
 
 # 初始化 Session State 自選股
 if "watchlist" not in st.session_state:
-  st.session_state["watchlist"] = ["2330.TW", "6669.TW", "0050.TW", "00878.TW"]
+  st.session_state["watchlist"] = [
+      "2330.TW",
+      "6669.TW",
+      "0050.TW",
+      "00878.TW",
+  ]
 
 st.title("👑 Aurora Executive | 全市場全股票 AI 智慧操盤旗艦系統")
 st.markdown("---")
 
 # 巨量全台股與熱門 ETF 中文名稱對照庫
 FULL_STOCK_DATABASE = {
-    # 權值與熱門個股
     "2330": ("台積電", "半導體業", "季配息"),
     "6669": ("緯穎", "電腦及週邊設備業", "年配息"),
     "2313": ("華通", "電子零組件業", "年配息"),
@@ -92,7 +96,7 @@ FULL_STOCK_DATABASE = {
     "2382": ("廣達", "電腦及週邊設備業", "年配息"),
     "3037": ("欣興", "電子零組件業", "年配息"),
     "3711": ("日月光投控", "半導體業", "年配息"),
-    # 熱門 ETF 大全
+    # 熱門 ETF 大全 (確保開頭 0 的全部正確對應)
     "0050": ("元大台灣50", "台股市值型 ETF", "半年度配息"),
     "0056": ("元大高股息", "台股高股息 ETF", "季配息"),
     "00878": ("國泰永續高股息", "台股高股息 ETF", "季配息"),
@@ -103,9 +107,8 @@ FULL_STOCK_DATABASE = {
     "00713": ("元大台灣高息低波", "台股高股息 ETF", "季配息"),
     "00922": ("國泰台灣領袖50", "台股市值型 ETF", "半年度配息"),
     "006208": ("富邦台50", "台股市值型 ETF", "年度配息"),
-    "00881": ("國泰台灣5G+ ", "台股科技 ETF", "年度配息"),
+    "00881": ("國泰台灣5G+", "台股科技 ETF", "年度配息"),
     "00935": ("野村台灣新科技50", "台股科技 ETF", "年度配息"),
-    # 大盤指數
     "^TWII": ("台灣加權指數", "大盤期貨指數", "不適用"),
 }
 
@@ -122,19 +125,21 @@ with st.sidebar:
     st.header("⚙️ 股票與 ETF 搜尋")
     user_input = st.text_input(
         "輸入台股代碼或 ETF (例: 2330, 0050, 00878)",
-        value="2330",
-        placeholder="輸入 4 或 5 碼代號",
+        value="00878",
+        placeholder="輸入代號",
     )
     raw = user_input.strip()
+    digits = "".join(filter(str.isdigit, raw))
+
+    # 智慧防呆與自動尾綴判定：開頭為 0 的 ETF 或 4 碼一律為 .TW
     if "." in raw or "^" in raw:
       symbol = raw.upper()
+    elif digits.startswith("0") or len(digits) == 4:
+      symbol = digits + ".TW"
+    elif len(digits) == 5:
+      symbol = digits + ".TWO"
     else:
-      digits = "".join(filter(str.isdigit, raw))
-      symbol = (
-          digits + ".TW"
-          if len(digits) == 4
-          else (digits + ".TWO" if len(digits) == 5 else raw.upper())
-      )
+      symbol = raw.upper()
 
     time_range = st.selectbox(
         "回測歷史週期", ["1個月", "3個月", "6個月", "1年", "2年"]
@@ -308,6 +313,16 @@ elif app_mode == "📊 個股深度分析":
         ticker = yf.Ticker(symbol)
         stock_data = ticker.history(period=period, auto_adjust=False)
 
+        # 智慧容錯：若 .TW 抓不到且為 5 碼，自動嘗試 .TWO
+        if (
+            (stock_data is None or stock_data.empty)
+            and symbol.endswith(".TW")
+            and len("".join(filter(str.isdigit, symbol))) == 5
+        ):
+          symbol = symbol.replace(".TW", ".TWO")
+          ticker = yf.Ticker(symbol)
+          stock_data = ticker.history(period=period, auto_adjust=False)
+
         if stock_data is None or stock_data.empty:
           stock_data = yf.download(
               symbol,
@@ -334,7 +349,7 @@ elif app_mode == "📊 個股深度分析":
                 or info.get("shortName")
                 or symbol
             )
-            industry_type = info.get("industry", "台灣上市櫃企業")
+            industry_type = info.get("industry", "台灣上市櫃企業與 ETF")
             div_freq = "依公告為準"
           except:
             comp_name, industry_type, div_freq = symbol, "一般企業", "依公告為準"
@@ -356,7 +371,7 @@ elif app_mode == "📊 個股深度分析":
 
       if stock_data is None or stock_data.empty or len(stock_data) < 2:
         st.error(
-            f"❌ 找不到代碼 `{symbol}` 的資料！請確認台股代號是否正確（上市請輸入 4 碼，上櫃請輸入 5 碼）。"
+            f"❌ 找不到代碼 `{symbol}` 的資料！請確認台股代號是否正確（上市請輸入 4 碼，ETF 或上櫃請確認）。"
         )
       else:
         for col in ["Close", "High", "Low", "Open", "Volume"]:
@@ -388,7 +403,7 @@ elif app_mode == "📊 個股深度分析":
         with col_t1:
           st.markdown(
               f"## 📌 標的名稱：<span style='color: #38bdf8;'>{comp_name}</span> | 代號：<span style='color: #fbbf24;'>`{symbol}`</span>"
-              f"<br><span style='font-size: 15px; color: #94a3b8;'>🏢 產業：<b>{industry_type}</b> | 💰 配息：<b>{div_freq}</b> | 📊 本益比(P/E)：<b>{pe_ratio}</b> | 📈 殖利率：<b>{div_yield}%</b> | 💵 EPS：<b>{eps_val}</b></span>"
+              f"<br><span style='font-size: 15px; color: #94a3b8;'>🏢 產業/類型：<b>{industry_type}</b> | 💰 配息：<b>{div_freq}</b> | 📊 本益比(P/E)：<b>{pe_ratio}</b> | 📈 殖利率：<b>{div_yield}%</b> | 💵 EPS：<b>{eps_val}</b></span>"
               f"<br><span style='font-size: 20px; color: #f8fafc;'>最新成交價: <b>${current_price:,.2f}</b> "
               f"({chg:+,.2f} / {chg_pct:+.2f}%)</span>",
               unsafe_allow_html=True,
