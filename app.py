@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（終極修復 Plotly 工具列圖示顏色）
+# 注入高質感深色操盤室 CSS 樣式（精準將 Plotly 工具列改為科技藍色系）
 st.markdown(
     """
     <style>
@@ -53,24 +53,26 @@ st.markdown(
         color: #090d16 !important;
     }
     
-    /* 終極修復 Plotly 圖表工具列 (Modebar) 與內部圖示清晰度 */
-    .js-plotly-plot .plotly .modebar {
+    /* 完美將 Plotly 圖表工具列改為科技深藍色 + 亮白/亮藍圖示 */
+    div.modebar {
         background-color: #1e293b !important;
-        border: 1px solid #475569 !important;
+        border: 1px solid #38bdf8 !important;
         border-radius: 8px !important;
         padding: 4px !important;
+        box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2) !important;
     }
-    .js-plotly-plot .plotly .modebar-btn {
+    div.modebar-btn {
         background-color: transparent !important;
     }
-    .js-plotly-plot .plotly .modebar-btn path {
+    div.modebar-btn path {
+        fill: #38bdf8 !important;
+    }
+    div.modebar-btn:hover path, div.modebar-btn.active path {
         fill: #ffffff !important;
     }
-    .js-plotly-plot .plotly .modebar-btn:hover path {
-        fill: #38bdf8 !important;
-    }
-    .js-plotly-plot .plotly .modebar-btn.active path {
-        fill: #38bdf8 !important;
+    div.modebar-btn:hover {
+        background-color: #3b82f6 !important;
+        border-radius: 4px !important;
     }
     
     /* 下拉選單 (selectbox) 容器與按鈕深色優化 */
