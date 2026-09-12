@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式
+# 注入高質感深色操盤室 CSS 樣式（特別修復下拉選單白底白字問題）
 st.markdown(
     """
     <style>
@@ -32,6 +32,29 @@ st.markdown(
     [data-testid="stSidebar"] label, [data-testid="stSidebar"] .stMarkdown {
         color: #e2e8f0 !important;
     }
+    
+    /* 專門修復下拉選單 (selectbox) 顯示不清的問題 */
+    div[data-baseweb="select"] > div {
+        background-color: #131c31 !important;
+        color: #f8fafc !important;
+        border: 1px solid #334155 !important;
+    }
+    div[data-baseweb="select"] span {
+        color: #f8fafc !important;
+    }
+    div[data-baseweb="popover"] div, div[data-baseweb="menu"] div {
+        background-color: #131c31 !important;
+        color: #f8fafc !important;
+    }
+    li[role="option"] {
+        background-color: #131c31 !important;
+        color: #f8fafc !important;
+    }
+    li[role="option"]:hover {
+        background-color: #1e293b !important;
+        color: #38bdf8 !important;
+    }
+
     .stMetric { 
         background: linear-gradient(145deg, #131c31 0%, #0f172a 100%) !important; 
         padding: 18px !important; 
@@ -96,7 +119,7 @@ FULL_STOCK_DATABASE = {
     "2382": ("廣達", "電腦及週邊設備業", "年配息"),
     "3037": ("欣興", "電子零組件業", "年配息"),
     "3711": ("日月光投控", "半導體業", "年配息"),
-    # 熱門 ETF 大全 (確保開頭 0 的全部正確對應)
+    # 熱門 ETF 大全
     "0050": ("元大台灣50", "台股市值型 ETF", "半年度配息"),
     "0056": ("元大高股息", "台股高股息 ETF", "季配息"),
     "00878": ("國泰永續高股息", "台股高股息 ETF", "季配息"),
@@ -131,7 +154,6 @@ with st.sidebar:
     raw = user_input.strip()
     digits = "".join(filter(str.isdigit, raw))
 
-    # 智慧防呆與自動尾綴判定：開頭為 0 的 ETF 或 4 碼一律為 .TW
     if "." in raw or "^" in raw:
       symbol = raw.upper()
     elif digits.startswith("0") or len(digits) == 4:
@@ -313,7 +335,6 @@ elif app_mode == "📊 個股深度分析":
         ticker = yf.Ticker(symbol)
         stock_data = ticker.history(period=period, auto_adjust=False)
 
-        # 智慧容錯：若 .TW 抓不到且為 5 碼，自動嘗試 .TWO
         if (
             (stock_data is None or stock_data.empty)
             and symbol.endswith(".TW")
@@ -334,7 +355,6 @@ elif app_mode == "📊 個股深度分析":
           if isinstance(stock_data.columns, pd.MultiIndex):
             stock_data.columns = stock_data.columns.droplevel(1)
 
-        # 智慧中文名稱對應
         clean_digits = "".join(filter(str.isdigit, symbol))
         if clean_digits in FULL_STOCK_DATABASE:
           comp_name, industry_type, div_freq = FULL_STOCK_DATABASE[
@@ -398,7 +418,6 @@ elif app_mode == "📊 個股深度分析":
         chg = current_price - prev_close
         chg_pct = (chg / prev_close) * 100
 
-        # 頂部標題區與自選股按鈕
         col_t1, col_t2 = st.columns([4, 1])
         with col_t1:
           st.markdown(
@@ -417,7 +436,6 @@ elif app_mode == "📊 個股深度分析":
           else:
             st.info("⭐ 已在自選股中")
 
-        # 專業報價面板
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         c1.metric("開盤價", f"${open_p:,.2f}")
         c2.metric("今日最高", f"${high_p:,.2f}")
@@ -428,7 +446,6 @@ elif app_mode == "📊 個股深度分析":
 
         st.markdown("---")
 
-        # 技術指標計算
         stock_data["MA5"] = stock_data["Close"].rolling(5).mean()
         stock_data["MA20"] = stock_data["Close"].rolling(20).mean()
         stock_data["MA60"] = stock_data["Close"].rolling(60).mean()
@@ -459,7 +476,7 @@ elif app_mode == "📊 個股深度分析":
         support_1 = ma60_val
         support_2 = current_price * 0.90
         resistance_1 = high_p * 1.025
-        quarter_target = current_price * 1.15  # 每季預估到達價
+        quarter_target = current_price * 1.15
 
         recent_rsi = float(stock_data["RSI"].iloc[-1])
         recent_macd = float(stock_data["MACD"].iloc[-1])
@@ -621,4 +638,5 @@ elif app_mode == "📊 個股深度分析":
     except Exception as e:
       st.error(f"❌ 系統錯誤: {str(e)}")
 else:
+  st.info("👈 請於左側邊欄輸入代碼開始操盤分析。")
   st.info("👈 請於左側邊欄輸入代碼開始操盤分析。")
