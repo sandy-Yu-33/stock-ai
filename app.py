@@ -11,13 +11,13 @@ import yfinance as yf
 
 # 設置頂級操盤頁面配置
 st.set_page_config(
-    page_title="Aurora Executive | 頂級 AI 智慧操盤系統",
+    page_title="33 操盤系統",
     page_icon="👑",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（終極修復下拉選單文字與背景對比）
+# 注入高質感深色操盤室 CSS 樣式（完美修復下拉選單背景與清晰白字）
 st.markdown(
     """
     <style>
@@ -33,7 +33,7 @@ st.markdown(
         color: #e2e8f0 !important;
     }
     
-    /* 終極修復：強制鎖定 Streamlit 下拉選單與彈出清單的背景與文字顏色 */
+    /* 下拉選單 (selectbox) 容器與按鈕深色優化 */
     div[data-baseweb="select"] > div {
         background-color: #1e293b !important;
         color: #ffffff !important;
@@ -44,19 +44,19 @@ st.markdown(
         font-weight: 600 !important;
     }
     
-    /* 針對彈出選單（Dropdown Menu / Popover）進行全面深色化與黑字高對比修復 */
+    /* 下拉彈出選單（Dropdown Menu / Popover）背景深色化與清晰白字修復 */
     div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"], div[role="listbox"] {
-        background-color: #f1f5f9 !important;
-        border: 1px solid #cbd5e1 !important;
+        background-color: #131c31 !important;
+        border: 1px solid #334155 !important;
     }
     div[data-baseweb="popover"] div, div[data-baseweb="menu"] div, span[role="option"], li[role="option"], div[role="option"] {
-        color: #0f172a !important;
-        background-color: transparent !important;
+        color: #ffffff !important;
+        background-color: #131c31 !important;
         font-weight: 600 !important;
     }
     li[role="option"]:hover, div[role="option"]:hover {
-        background-color: #3b82f6 !important;
-        color: #ffffff !important;
+        background-color: #38bdf8 !important;
+        color: #090d16 !important;
     }
 
     .stMetric { 
@@ -101,9 +101,10 @@ if "watchlist" not in st.session_state:
       "00878.TW",
   ]
 
-st.title("👑 Aurora Executive | 全市場全股票 AI 智慧操盤旗艦系統")
+st.title("👑 33 操盤系統")
 st.markdown("---")
 
+# 巨量全台股與熱門 ETF 中文名稱對照庫
 FULL_STOCK_DATABASE = {
     "2330": ("台積電", "半導體業", "季配息"),
     "6669": ("緯穎", "電腦及週邊設備業", "年配息"),
@@ -122,6 +123,7 @@ FULL_STOCK_DATABASE = {
     "2382": ("廣達", "電腦及週邊設備業", "年配息"),
     "3037": ("欣興", "電子零組件業", "年配息"),
     "3711": ("日月光投控", "半導體業", "年配息"),
+    # 熱門 ETF 大全
     "0050": ("元大台灣50", "台股市值型 ETF", "半年度配息"),
     "0056": ("元大高股息", "台股高股息 ETF", "季配息"),
     "00878": ("國泰永續高股息", "台股高股息 ETF", "季配息"),
@@ -137,6 +139,7 @@ FULL_STOCK_DATABASE = {
     "^TWII": ("台灣加權指數", "大盤期貨指數", "不適用"),
 }
 
+# 側邊欄導覽
 with st.sidebar:
   st.header("🧭 操盤系統導覽")
   app_mode = st.radio(
@@ -194,6 +197,9 @@ with st.sidebar:
     except:
       st.text(f"{idx_name}: 連線中...")
 
+# -------------------------------------------------------------------------
+# 模組一：AI 智能選股中心
+# -------------------------------------------------------------------------
 if app_mode == "🤖 AI 智能選股中心":
   st.header("🤖 AI 智能選股與強勢標的雷達")
   st.markdown(
@@ -269,6 +275,9 @@ if app_mode == "🤖 AI 智能選股中心":
     })
     st.dataframe(ranking_df, use_container_width=True)
 
+# -------------------------------------------------------------------------
+# 模組二：我的自選股
+# -------------------------------------------------------------------------
 elif app_mode == "⭐ 我的自選股":
   st.header("⭐ 個人操盤自選股與 ETF 清單")
   st.markdown("管理您長期追蹤與記錄的投資組合。")
@@ -320,6 +329,9 @@ elif app_mode == "⭐ 我的自選股":
     st.session_state["watchlist"] = []
     st.rerun()
 
+# -------------------------------------------------------------------------
+# 模組三：個股深度分析
+# -------------------------------------------------------------------------
 elif app_mode == "📊 個股深度分析":
   if symbol:
     try:
@@ -327,6 +339,7 @@ elif app_mode == "📊 個股深度分析":
         ticker = yf.Ticker(symbol)
         stock_data = ticker.history(period=period, auto_adjust=False)
 
+        # 智慧容錯：若 .TW 抓不到且為 5 碼，自動嘗試 .TWO
         if (
             (stock_data is None or stock_data.empty)
             and symbol.endswith(".TW")
@@ -347,6 +360,7 @@ elif app_mode == "📊 個股深度分析":
           if isinstance(stock_data.columns, pd.MultiIndex):
             stock_data.columns = stock_data.columns.droplevel(1)
 
+        # 智慧中文名稱對應
         clean_digits = "".join(filter(str.isdigit, symbol))
         if clean_digits in FULL_STOCK_DATABASE:
           comp_name, industry_type, div_freq = FULL_STOCK_DATABASE[
@@ -410,6 +424,7 @@ elif app_mode == "📊 個股深度分析":
         chg = current_price - prev_close
         chg_pct = (chg / prev_close) * 100
 
+        # 頂部標題區與自選股按鈕
         col_t1, col_t2 = st.columns([4, 1])
         with col_t1:
           st.markdown(
@@ -428,6 +443,7 @@ elif app_mode == "📊 個股深度分析":
           else:
             st.info("⭐ 已在自選股中")
 
+        # 專業報價面板
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         c1.metric("開盤價", f"${open_p:,.2f}")
         c2.metric("今日最高", f"${high_p:,.2f}")
@@ -438,6 +454,7 @@ elif app_mode == "📊 個股深度分析":
 
         st.markdown("---")
 
+        # 技術指標計算
         stock_data["MA5"] = stock_data["Close"].rolling(5).mean()
         stock_data["MA20"] = stock_data["Close"].rolling(20).mean()
         stock_data["MA60"] = stock_data["Close"].rolling(60).mean()
@@ -468,7 +485,7 @@ elif app_mode == "📊 個股深度分析":
         support_1 = ma60_val
         support_2 = current_price * 0.90
         resistance_1 = high_p * 1.025
-        quarter_target = current_price * 1.15
+        quarter_target = current_price * 1.15  # 每季預估到達價
 
         recent_rsi = float(stock_data["RSI"].iloc[-1])
         recent_macd = float(stock_data["MACD"].iloc[-1])
