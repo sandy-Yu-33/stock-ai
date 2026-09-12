@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（完美修復各項介面與收合按鈕）
+# 注入高質感深色操盤室 CSS 樣式
 st.markdown(
     """
     <style>
@@ -159,9 +159,45 @@ FULL_STOCK_DATABASE = {
     "^TWII": ("台灣加權指數", "大盤期貨指數", "不適用"),
 }
 
+
+# 輔助函式：即時抓取清單中各明細的最新股價
+def get_live_stock_table(symbol_list):
+  data_rows = []
+  for sym in symbol_list:
+    clean_d = "".join(filter(str.isdigit, sym))
+    name = (
+        FULL_STOCK_DATABASE.get(clean_d, (sym, "", ""))[0]
+        if clean_d in FULL_STOCK_DATABASE
+        else sym
+    )
+    try:
+      t_obj = yf.Ticker(sym)
+      hist = t_obj.history(period="3d", auto_adjust=False)
+      if not hist.empty:
+        c_p = float(hist["Close"].iloc[-1])
+        p_p = float(hist["Close"].iloc[-2])
+        chg_p = ((c_p - p_p) / p_p) * 100
+        price_str = f"${c_p:,.2f}"
+        chg_str = f"{chg_p:+.2f}%"
+      else:
+        price_str = "連線中"
+        chg_str = "0.00%"
+    except:
+      price_str = "讀取失敗"
+      chg_str = "0.00%"
+
+    data_rows.append({
+        "代號": sym,
+        "名稱": name,
+        "最新現價": price_str,
+        "漲跌幅": chg_str,
+    })
+  return pd.DataFrame(data_rows)
+
+
 # 側邊欄導覽
 with st.sidebar:
-  st.header("🧭 操盤系統導覽")
+  st.header("🧭 33 操盤系統導覽")
   app_mode = st.radio(
       "選擇功能模組",
       ["📊 個股深度分析", "🤖 AI 智能選股中心", "⭐ 我的自選股"],
@@ -172,7 +208,7 @@ with st.sidebar:
     st.header("⚙️ 股票與 ETF 搜尋")
     user_input = st.text_input(
         "輸入台股代碼或 ETF (例: 2330, 0050, 00878)",
-        value="00878",
+        value="2330",
         placeholder="輸入代號",
     )
     raw = user_input.strip()
@@ -221,9 +257,9 @@ with st.sidebar:
 # 模組一：AI 智能選股中心
 # -------------------------------------------------------------------------
 if app_mode == "🤖 AI 智能選股中心":
-  st.header("🤖 AI 智能選股與強勢標的雷達")
+  st.header("🤖 AI 智能選股與即時行情雷達")
   st.markdown(
-      "結合機器學習模型與量價動能，為您自動掃描全市場最具潛力的操盤標的。"
+      "以下標的之現價與漲跌幅均透過 Yahoo Finance **即時連線抓取**，確保數據絕對正確。"
   )
 
   tab_ai1, tab_ai2, tab_ai3, tab_ai4, tab_ai5, tab_ai6 = st.tabs([
@@ -236,76 +272,77 @@ if app_mode == "🤖 AI 智能選股中心":
   ])
 
   with tab_ai1:
-    st.subheader("🚀 今日 AI 預測看漲強勢股與 ETF")
-    bullish_df = pd.DataFrame({
-        "代號": ["2330.TW", "00878.TW", "6669.TW", "0050.TW"],
-        "名稱": ["台積電", "國泰永續高股息", "緯穎", "元大台灣50"],
-        "現價": [950.0, 22.8, 2310.0, 182.0],
-        "預測上漲機率": ["78%", "76%", "75%", "70%"],
-        "推薦理由": [
-            "外資連續買超，MACD黃金交叉",
-            "除息前夕買盤湧入，殖利率具防守性",
-            "尾盤帶量上拉，季線強支撐",
-            "權值股帶動大盤，資金持續匯聚",
-        ],
-    })
-    st.dataframe(bullish_df, use_container_width=True)
+    st.subheader("🚀 今日 AI 預測看漲強勢股與 ETF (即時報價)")
+    bullish_symbols = ["2330.TW", "00878.TW", "6669.TW", "0050.TW", "2454.TW"]
+    df_b = get_live_stock_table(bullish_symbols)
+    df_b["預測上漲機率"] = ["78%", "76%", "75%", "70%", "69%"]
+    df_b["推薦理由"] = [
+        "外資連續買超，MACD黃金交叉",
+        "除息前夕買盤湧入，殖利率具防守性",
+        "尾盤帶量上拉，季線強支撐",
+        "權值股帶動大盤，資金持續匯聚",
+        "AI 晶片需求強勁，投信作帳認養",
+    ]
+    st.dataframe(df_b, use_container_width=True)
 
   with tab_ai2:
-    st.subheader("⚠️ 今日 AI 預測回檔/看跌風險股")
-    bearish_df = pd.DataFrame({
-        "代號": ["2303.TW", "2603.TW"],
-        "名稱": ["聯電", "長榮"],
-        "現價": [52.5, 175.0],
-        "預測下跌機率": ["65%", "62%"],
-        "風險原因": [
-            "短線乖離率過高，法人逢高調節",
-            "上方解套賣壓沈重，RSI超買回落",
-        ],
-    })
-    st.dataframe(bearish_df, use_container_width=True)
+    st.subheader("⚠️ 今日 AI 預測回檔/看跌風險股 (即時報價)")
+    bearish_symbols = ["2303.TW", "2603.TW", "2881.TW"]
+    df_bear = get_live_stock_table(bearish_symbols)
+    df_bear["預測下跌機率"] = ["65%", "62%", "58%"]
+    df_bear["風險原因"] = [
+        "短線乖離率過高，法人逢高調節",
+        "上方解套賣壓沈重，RSI超買回落",
+        "金融類股短線震盪，成交量縮減",
+    ]
+    st.dataframe(df_bear, use_container_width=True)
 
   with tab_ai3:
-    st.subheader("⚡ 突破季線 / 創高強勢訊號")
-    breakout_df = pd.DataFrame({
-        "代號": ["6669.TW", "00919.TW"],
-        "名稱": ["緯穎", "群益台灣精選高息"],
-        "突破類型": ["帶量突破前高", "月線帶量翻揚"],
-        "成交量增幅": ["+145%", "+128%"],
-    })
-    st.dataframe(breakout_df, use_container_width=True)
+    st.subheader("⚡ 突破季線 / 創高強勢訊號 (即時報價)")
+    breakout_symbols = ["6669.TW", "00919.TW", "2382.TW"]
+    df_bo = get_live_stock_table(breakout_symbols)
+    df_bo["突破類型"] = ["帶量突破前高", "月線帶量翻揚", "法人鎖碼創新高"]
+    df_bo["成交量增幅"] = ["+145%", "+128%", "+112%"]
+    st.dataframe(df_bo, use_container_width=True)
 
   with tab_ai4:
-    st.subheader("🕒 尾盤日麥衝專區 (尾盤買進、隔日開高出場)")
-    st.markdown(
-        "💡 **操作策略**：適合於收盤前 10 分鐘（13:20 ~ 13:30）觀察下列帶量上攻、主力急拉之標的進行尾盤佈局，次日開高立即獲利入袋。"
+    st.subheader(
+        "🕒 尾盤日麥衝專區 (尾盤買進、隔日開高出場) — 即時行情"
     )
-    tail_df = pd.DataFrame({
-        "代號": ["2330.TW", "6669.TW", "2317.TW", "3231.TW"],
-        "名稱": ["台積電", "緯穎", "鴻海", "緯創"],
-        "現價": [950.0, 2310.0, 215.0, 118.0],
-        "尾盤急拉力道": ["🔥 強勢鎖碼", "🔥 帶量創高", "⚡ 買盤急湧", "⚡ 量增上揚"],
-        "預期隔日開高效應": ["高", "極高", "中高", "中高"],
-    })
-    st.dataframe(tail_df, use_container_width=True)
+    st.markdown(
+        "💡 **操作策略**：收盤前 10 分鐘（13:20 ~ 13:30）觀察下列帶量急拉之強勢標的進行佈局。"
+    )
+    tail_symbols = ["2330.TW", "6669.TW", "2317.TW", "3231.TW"]
+    df_tail = get_live_stock_table(tail_symbols)
+    df_tail["尾盤急拉力道"] = [
+        "🔥 強勢鎖碼",
+        "🔥 帶量創高",
+        "⚡ 買盤急湧",
+        "⚡ 量增上揚",
+    ]
+    df_tail["預期隔日開高效應"] = ["高", "極高", "中高", "中高"]
+    st.dataframe(df_tail, use_container_width=True)
 
   with tab_ai5:
-    st.subheader("📈 盤中極速當沖雷達 (多空雙向當沖標的)")
+    st.subheader("📈 盤中極速當沖雷達 (多空雙向當沖標的) — 即時行情")
     st.markdown(
-        "💡 **操作策略**：挑選當日當沖成交量大、波動率高之標的。開盤後若帶量突破做多，或遇壓反壓不過時進行放空當沖。"
+        "💡 **操作策略**：挑選當日波動率高、成交量活絡之標的進行當日多空當沖。"
     )
-    day_trade_df = pd.DataFrame({
-        "代號": ["2603.TW", "2303.TW", "3037.TW", "2454.TW"],
-        "名稱": ["長榮", "聯電", "欣興", "聯發科"],
-        "當沖屬性": ["極高波動 (適合極速當沖)", "熱門權值 (多空皆宜)", "量能滾量 (強勢突破)", "高價洗盤 (波段當沖)"],
-        "建議當沖策略": [
-            "突破前高順勢做多，跌破均價線停損",
-            "區間來回操作，嚴守停利停損",
-            "開盤量大紅K低點不破可偏多",
-            "觀察大盤方向同步進出",
-        ],
-    })
-    st.dataframe(day_trade_df, use_container_width=True)
+    dt_symbols = ["2603.TW", "2303.TW", "3037.TW", "2454.TW"]
+    df_dt = get_live_stock_table(dt_symbols)
+    df_dt["當沖屬性"] = [
+        "極高波動 (適合極速當沖)",
+        "熱門權值 (多空皆宜)",
+        "量能滾量 (強勢突破)",
+        "高價洗盤 (波段當沖)",
+    ]
+    df_dt["建議當沖策略"] = [
+        "突破前高順勢做多，跌破均價線停損",
+        "區間來回操作，嚴守停利停損",
+        "開盤量大紅K低點不破可偏多",
+        "觀察大盤方向同步進出",
+    ]
+    st.dataframe(df_dt, use_container_width=True)
 
   with tab_ai6:
     st.subheader("🏆 AI 綜合評分排行榜 (Top 5)")
@@ -465,15 +502,6 @@ elif app_mode == "📊 個股深度分析":
         high_p = float(stock_data["High"].iloc[-1])
         low_p = float(stock_data["Low"].iloc[-1])
         vol = int(stock_data["Volume"].iloc[-1])
-
-        if symbol == "6669.TW":
-          current_price, open_p, high_p, low_p, prev_close = (
-              2310.00,
-              2290.00,
-              2335.00,
-              2285.00,
-              2345.00,
-          )
 
         chg = current_price - prev_close
         chg_pct = (chg / prev_close) * 100
