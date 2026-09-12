@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（精準將 Plotly 工具列改為科技藍色系）
+# 注入高質感深色操盤室 CSS 樣式（強制將 Plotly 工具列與圖示改為深藍底 + 亮藍圖示）
 st.markdown(
     """
     <style>
@@ -53,25 +53,25 @@ st.markdown(
         color: #090d16 !important;
     }
     
-    /* 完美將 Plotly 圖表工具列改為科技深藍色 + 亮白/亮藍圖示 */
-    div.modebar {
-        background-color: #1e293b !important;
-        border: 1px solid #38bdf8 !important;
+    /* 徹底解決 Plotly 工具列圖示看不見的問題：深藍底色 + 亮藍色圖示 */
+    .modebar, div.modebar, .js-plotly-plot .plotly .modebar {
+        background-color: #0f172a !important;
+        border: 2px solid #38bdf8 !important;
         border-radius: 8px !important;
         padding: 4px !important;
-        box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2) !important;
+        box-shadow: 0 4px 20px rgba(56, 189, 248, 0.4) !important;
     }
-    div.modebar-btn {
+    .modebar-btn, div.modebar-btn {
         background-color: transparent !important;
     }
-    div.modebar-btn path {
+    .modebar-btn path, div.modebar-btn path, .js-plotly-plot .plotly .modebar-btn path {
         fill: #38bdf8 !important;
     }
-    div.modebar-btn:hover path, div.modebar-btn.active path {
+    .modebar-btn:hover path, div.modebar-btn:hover path, .modebar-btn.active path {
         fill: #ffffff !important;
     }
-    div.modebar-btn:hover {
-        background-color: #3b82f6 !important;
+    .modebar-btn:hover, div.modebar-btn:hover {
+        background-color: #1d4ed8 !important;
         border-radius: 4px !important;
     }
     
@@ -752,3 +752,4 @@ elif app_mode == "📊 個股深度分析":
       st.error(f"❌ 系統錯誤: {str(e)}")
 else:
   st.info("👈 請於左側邊欄輸入代碼開始操盤分析。")
+   
