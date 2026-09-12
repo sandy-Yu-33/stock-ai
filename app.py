@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（將下拉選單文字強制改為深黑色以確保清晰）
+# 注入高質感深色操盤室 CSS 樣式（終極修復下拉選單文字與背景對比）
 st.markdown(
     """
     <style>
@@ -33,26 +33,29 @@ st.markdown(
         color: #e2e8f0 !important;
     }
     
-    /* 下拉選單 (selectbox) 專用黑字與白底設計 */
+    /* 終極修復：強制鎖定 Streamlit 下拉選單與彈出清單的背景與文字顏色 */
     div[data-baseweb="select"] > div {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        border: 1px solid #334155 !important;
+        background-color: #1e293b !important;
+        color: #ffffff !important;
+        border: 1px solid #475569 !important;
     }
     div[data-baseweb="select"] span {
-        color: #000000 !important;
+        color: #ffffff !important;
         font-weight: 600 !important;
     }
-    div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
-        background-color: #ffffff !important;
+    
+    /* 針對彈出選單（Dropdown Menu / Popover）進行全面深色化與黑字高對比修復 */
+    div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"], div[role="listbox"] {
+        background-color: #f1f5f9 !important;
+        border: 1px solid #cbd5e1 !important;
     }
-    div[data-baseweb="popover"] div, div[data-baseweb="menu"] div, span[role="option"], li[role="option"] {
-        color: #000000 !important;
-        background-color: #ffffff !important;
-        font-weight: 500 !important;
+    div[data-baseweb="popover"] div, div[data-baseweb="menu"] div, span[role="option"], li[role="option"], div[role="option"] {
+        color: #0f172a !important;
+        background-color: transparent !important;
+        font-weight: 600 !important;
     }
-    li[role="option"]:hover {
-        background-color: #38bdf8 !important;
+    li[role="option"]:hover, div[role="option"]:hover {
+        background-color: #3b82f6 !important;
         color: #ffffff !important;
     }
 
