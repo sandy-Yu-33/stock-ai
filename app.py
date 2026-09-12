@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（特別修復下拉選單白底白字問題）
+# 注入高質感深色操盤室 CSS 樣式（徹底修復下拉選單文字清晰度）
 st.markdown(
     """
     <style>
@@ -33,22 +33,25 @@ st.markdown(
         color: #e2e8f0 !important;
     }
     
-    /* 專門修復下拉選單 (selectbox) 顯示不清的問題 */
+    /* 強效修復下拉選單 (selectbox) 文字清晰度與顏色 */
     div[data-baseweb="select"] > div {
         background-color: #131c31 !important;
-        color: #f8fafc !important;
+        color: #ffffff !important;
         border: 1px solid #334155 !important;
     }
     div[data-baseweb="select"] span {
-        color: #f8fafc !important;
+        color: #ffffff !important;
     }
-    div[data-baseweb="popover"] div, div[data-baseweb="menu"] div {
+    div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"] {
         background-color: #131c31 !important;
-        color: #f8fafc !important;
+        color: #ffffff !important;
+    }
+    div[data-baseweb="popover"] div, div[data-baseweb="menu"] div, span[role="option"] {
+        color: #ffffff !important;
     }
     li[role="option"] {
         background-color: #131c31 !important;
-        color: #f8fafc !important;
+        color: #ffffff !important;
     }
     li[role="option"]:hover {
         background-color: #1e293b !important;
@@ -100,7 +103,6 @@ if "watchlist" not in st.session_state:
 st.title("👑 Aurora Executive | 全市場全股票 AI 智慧操盤旗艦系統")
 st.markdown("---")
 
-# 巨量全台股與熱門 ETF 中文名稱對照庫
 FULL_STOCK_DATABASE = {
     "2330": ("台積電", "半導體業", "季配息"),
     "6669": ("緯穎", "電腦及週邊設備業", "年配息"),
@@ -119,7 +121,6 @@ FULL_STOCK_DATABASE = {
     "2382": ("廣達", "電腦及週邊設備業", "年配息"),
     "3037": ("欣興", "電子零組件業", "年配息"),
     "3711": ("日月光投控", "半導體業", "年配息"),
-    # 熱門 ETF 大全
     "0050": ("元大台灣50", "台股市值型 ETF", "半年度配息"),
     "0056": ("元大高股息", "台股高股息 ETF", "季配息"),
     "00878": ("國泰永續高股息", "台股高股息 ETF", "季配息"),
@@ -135,7 +136,6 @@ FULL_STOCK_DATABASE = {
     "^TWII": ("台灣加權指數", "大盤期貨指數", "不適用"),
 }
 
-# 側邊欄導覽
 with st.sidebar:
   st.header("🧭 操盤系統導覽")
   app_mode = st.radio(
@@ -193,9 +193,6 @@ with st.sidebar:
     except:
       st.text(f"{idx_name}: 連線中...")
 
-# -------------------------------------------------------------------------
-# 模組一：AI 智能選股中心
-# -------------------------------------------------------------------------
 if app_mode == "🤖 AI 智能選股中心":
   st.header("🤖 AI 智能選股與強勢標的雷達")
   st.markdown(
@@ -271,9 +268,6 @@ if app_mode == "🤖 AI 智能選股中心":
     })
     st.dataframe(ranking_df, use_container_width=True)
 
-# -------------------------------------------------------------------------
-# 模組二：我的自選股
-# -------------------------------------------------------------------------
 elif app_mode == "⭐ 我的自選股":
   st.header("⭐ 個人操盤自選股與 ETF 清單")
   st.markdown("管理您長期追蹤與記錄的投資組合。")
@@ -325,9 +319,6 @@ elif app_mode == "⭐ 我的自選股":
     st.session_state["watchlist"] = []
     st.rerun()
 
-# -------------------------------------------------------------------------
-# 模組三：個股深度分析
-# -------------------------------------------------------------------------
 elif app_mode == "📊 個股深度分析":
   if symbol:
     try:
