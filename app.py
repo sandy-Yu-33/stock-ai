@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（終極強制將所有 Streamlit 選單與懸停框背景改為深藍，文字圖標全改黑字）
+# 注入高質感深色操盤室 CSS 樣式（保留表格工具列，強制底色深藍、圖標與文字改為黑色/亮藍）
 st.markdown(
     """
     <style>
@@ -53,27 +53,30 @@ st.markdown(
         color: #090d16 !important;
     }
     
-    /* 終極強制：將 Streamlit 右上角選單、彈出選單、懸停框背景全面改為深藍色，文字圖標全面改為黑色 */
-    div[data-baseweb="menu"], div[role="menu"], ul[role="menu"], .stMenu, [data-testid="stMainMenuPopover"], div[data-baseweb="popover"], .modebar, div.modebar, .hovertext {
-        background-color: #0f172a !important;
-        border: 2px solid #38bdf8 !important;
-        border-radius: 10px !important;
-        color: #000000 !important;
+    /* 完整保留表格右上角工具列，並將背景強制改為深藍色 (#1e293b)，圖標與文字強制改為黑色 (#000000) */
+    div.stDataFrame [data-testid="stElementToolbar"], .modebar, div.modebar, .js-plotly-plot .plotly .modebar {
+        background-color: #1e293b !important;
+        border: 1px solid #38bdf8 !important;
+        border-radius: 8px !important;
+        padding: 4px !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6) !important;
+        display: flex !important;
+        visibility: visible !important;
     }
     
-    /* 強制將選單與懸停提示中的所有文字、項目、說明改為醒目黑色（#000000）與粗體 */
-    div[data-baseweb="menu"] div, div[role="menu"] item, span, p, small, label, [data-testid="stMainMenuPopover"] span, [data-testid="stMainMenuPopover"] button, .hovertext text, .hovertext *, div[data-baseweb="popover"] * {
+    /* 表格工具列內的圖標與按鈕 SVG 強制改為黑色 */
+    div.stDataFrame [data-testid="stElementToolbar"] button svg, div.stDataFrame [data-testid="stElementToolbar"] svg {
+        fill: #000000 !important;
         color: #000000 !important;
-        fill: #000000 !important;
-        font-weight: 800 !important;
     }
-    
-    /* Plotly 工具列與浮動按鈕圖標全面強制填滿黑色 */
-    .modebar-btn path, div.modebar-btn path, .js-plotly-plot .plotly .modebar-btn path {
-        fill: #000000 !important;
-    }
-    .modebar-btn:hover path, div.modebar-btn:hover path {
+    div.stDataFrame [data-testid="stElementToolbar"] button:hover svg {
         fill: #38bdf8 !important;
+    }
+    
+    /* 表格深色質感優化 */
+    [data-testid="stDataFrame"] {
+        border: 1px solid #1e293b !important;
+        border-radius: 10px !important;
     }
 
     /* 下拉選單 (selectbox) 容器與按鈕深色優化 */
