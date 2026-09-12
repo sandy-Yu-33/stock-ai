@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（將工具列背景改為深藍，圖標改為黑字）
+# 注入高質感深色操盤室 CSS 樣式（完全依照您的截圖：工具列純白底，圖標與邊框黑色）
 st.markdown(
     """
     <style>
@@ -30,7 +30,7 @@ st.markdown(
         border-right: 1px solid #1e293b;
     }
     [data-testid="stSidebar"] label, [data-testid="stSidebar"] .stMarkdown {
-        color: #e2e8f0 !important;
+        color: #e2e8f0 !important; 
     }
     
     /* 絕對鎖定並美化頂端導覽列的收合/展開按鈕 */
@@ -53,11 +53,11 @@ st.markdown(
         color: #090d16 !important;
     }
     
-    /* 依照您的指示：表格右上角工具列底色改為深藍色 (#1e293b)，圖標改為清晰黑色 (#000000) */
+    /* 完美對齊您的截圖：表格右上角工具列背景強制改為純白色，邊框與圖標改為黑色 */
     div.stDataFrame [data-testid="stElementToolbar"], .modebar, div.modebar {
-        background-color: #1e293b !important;
+        background-color: #ffffff !important;
         border: 2px solid #38bdf8 !important;
-        border-radius: 10px !important;
+        border-radius: 12px !important;
         padding: 4px !important;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6) !important;
     }
