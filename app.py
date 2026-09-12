@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（完美修復下拉選單背景與清晰白字）
+# 注入高質感深色操盤室 CSS 樣式（包含側邊欄收合按鈕顏色優化）
 st.markdown(
     """
     <style>
@@ -33,6 +33,17 @@ st.markdown(
         color: #e2e8f0 !important;
     }
     
+    /* 側邊欄收合按鈕 (Collapse / Expand button) 顏色美化與高對比修復 */
+    button[kind="header"], [data-testid="stSidebarNav"] button, button[data-testid="baseButton-header"] {
+        background-color: #1e293b !important;
+        color: #38bdf8 !important;
+        border: 1px solid #475569 !important;
+    }
+    button[kind="header"] svg, [data-testid="stSidebarNav"] button svg, button[data-testid="baseButton-header"] svg {
+        fill: #38bdf8 !important;
+        color: #38bdf8 !important;
+    }
+    
     /* 下拉選單 (selectbox) 容器與按鈕深色優化 */
     div[data-baseweb="select"] > div {
         background-color: #1e293b !important;
@@ -44,7 +55,7 @@ st.markdown(
         font-weight: 600 !important;
     }
     
-    /* 下拉彈出選單（Dropdown Menu / Popover）背景深色化與清晰白字修復 */
+    /* 下拉彈出選單背景深色化與清晰白字修復 */
     div[data-baseweb="popover"], div[data-baseweb="menu"], ul[role="listbox"], div[role="listbox"] {
         background-color: #131c31 !important;
         border: 1px solid #334155 !important;
