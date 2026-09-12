@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 注入高質感深色操盤室 CSS 樣式（強制將 Plotly 工具列與浮動選單改為深色深藍底 + 亮白/亮藍圖標）
+# 注入高質感深色操盤室 CSS 樣式（嚴格遵照您的指示：底色深藍色，圖標與文字黑色）
 st.markdown(
     """
     <style>
@@ -53,34 +53,27 @@ st.markdown(
         color: #090d16 !important;
     }
     
-    /* 徹底強制美化 Plotly 圖表工具列 (Modebar) 與彈出選單背景為深藍色，圖標為亮白/亮藍 */
-    .modebar, div.modebar, .js-plotly-plot .plotly .modebar {
+    /* 嚴格執行您的指示：選單與工具列底色深藍色 (#1e293b / #131c31)，圖標與文字黑色 (#000000) */
+    div[data-baseweb="menu"], div[role="menu"], ul[role="menu"], .stMenu, [data-testid="stMainMenuPopover"], div[data-baseweb="popover"], .modebar, div.modebar {
         background-color: #1e293b !important;
-        border: 1px solid #38bdf8 !important;
+        border: 2px solid #38bdf8 !important;
         border-radius: 8px !important;
-        padding: 4px !important;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6) !important;
     }
-    .modebar-btn, div.modebar-btn {
-        background-color: transparent !important;
+    
+    /* 強制將選單內所有文字、項目、說明改為黑字或極深色，確保在深藍/白底上清晰可見 */
+    div[data-baseweb="menu"] div, div[role="menu"] item, span, p, small, label, [data-testid="stMainMenuPopover"] span, [data-testid="stMainMenuPopover"] button {
+        color: #000000 !important;
+        font-weight: 700 !important;
     }
+    
+    /* Plotly 工具列按鈕圖標強制改為黑色 */
     .modebar-btn path, div.modebar-btn path, .js-plotly-plot .plotly .modebar-btn path {
-        fill: #ffffff !important;
+        fill: #000000 !important;
     }
-    .modebar-btn:hover path, div.modebar-btn:hover path, .modebar-btn.active path {
+    .modebar-btn:hover path, div.modebar-btn:hover path {
         fill: #38bdf8 !important;
     }
-    .modebar-btn:hover, div.modebar-btn:hover {
-        background-color: #0f172a !important;
-        border-radius: 4px !important;
-    }
-    
-    /* 針對 Plotly 點開後的浮動下拉選單 (如 System/Light/Dark 等) 強制深色化與清晰白字 */
-    .modebar .popover, .modebar-dropdown, div[class*="modebar"] div, .hovertext, .js-plotly-plot .plotly .modebar-header {
-        background-color: #131c31 !important;
-        color: #ffffff !important;
-    }
-    
+
     /* 下拉選單 (selectbox) 容器與按鈕深色優化 */
     div[data-baseweb="select"] > div {
         background-color: #1e293b !important;
