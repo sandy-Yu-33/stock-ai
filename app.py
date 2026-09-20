@@ -945,6 +945,8 @@ elif page == "📒 交易日誌":
                     st.write("• 平均虧損大於平均獲利：可檢查風險報酬比與停損紀律。")
                 if stats["交易筆數"] < 20:
                     st.write("• 樣本數少於 20 筆，暫時不宜從統計結果下強結論。")
+        except Exception as e:
+            st.error(f"解析交易日誌發生錯誤：{str(e)}")
 
 st.divider()
 st.caption(
