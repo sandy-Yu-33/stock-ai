@@ -1,8 +1,8 @@
-import io
+from datetime import datetime, timedelta
 import math
 import re
 import warnings
-from datetime import datetime, timedelta
+import io
 
 import numpy as np
 import pandas as pd
@@ -86,7 +86,6 @@ def get_history(symbol, period="1y", interval="1d"):
         if df is None or df.empty:
             return pd.DataFrame()
         if isinstance(df.columns, pd.MultiIndex):
-            # yfinance can return MultiIndex even for one ticker
             try:
                 df = df.xs(symbol, axis=1, level=-1)
             except Exception:
@@ -102,11 +101,6 @@ def get_history(symbol, period="1y", interval="1d"):
         return df
     except Exception:
         return pd.DataFrame()
-
-def last_data_date(df):
-    if df.empty:
-        return None
-    return df.index[-1]
 
 # -----------------------------
 # Indicators
@@ -211,8 +205,6 @@ def score_asset(df):
             breakout -= 35
     breakout = clamp(breakout)
 
-    # Risk score: higher means more favorable risk characteristics,
-    # not "low risk guaranteed".
     risk = 70
     if pd.notna(r["Volatility20"]):
         risk -= np.clip((r["Volatility20"] - 0.30) * 80, -10, 35)
@@ -297,11 +289,6 @@ def market_regime():
 # -----------------------------
 @st.cache_data(ttl=900, show_spinner=False)
 def get_twse_institutional(symbol, date_str=None):
-    """
-    TWSE T86 official endpoint.
-    Returns foreign / investment trust / dealer net buy-sell shares where available.
-    No fabricated fallback.
-    """
     if requests is None or not symbol.endswith(".TW"):
         return None
 
@@ -328,7 +315,6 @@ def get_twse_institutional(symbol, date_str=None):
             if not row:
                 continue
             if str(row[0]).strip() == code:
-                # TWSE T86 column positions can change. Detect by headers.
                 fields = data.get("fields", [])
                 mapping = {str(f).strip(): i for i, f in enumerate(fields)}
                 def find_col(words):
@@ -451,7 +437,6 @@ def backtest_ma(df, fast=20, slow=60, fee_bps=10, slippage_bps=5):
     x["Fast"] = x["Close"].rolling(fast).mean()
     x["Slow"] = x["Close"].rolling(slow).mean()
 
-    # Signal is based on today's close; position applies from next bar.
     x["Signal"] = (x["Fast"] > x["Slow"]).astype(int)
     x["Position"] = x["Signal"].shift(1).fillna(0)
     x["AssetRet"] = x["Close"].pct_change().fillna(0)
@@ -922,7 +907,6 @@ elif page == "🛡️ 投資組合風險":
             scenarios = [-0.10, -0.20, -0.30]
             rows = []
             for shock in scenarios:
-                # Simple common-market shock scenario, not a forecast.
                 rows.append({
                     "情境": f"全部持倉同步 {shock:.0%}",
                     "估算損失": pr["total_value"] * shock,
