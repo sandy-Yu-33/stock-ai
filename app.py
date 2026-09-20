@@ -45,18 +45,83 @@ DEFAULT_WATCHLIST = [
     "2317.TW", "2454.TW", "2382.TW", "3231.TW", "NVDA", "AAPL", "TSLA"
 ]
 
-ASSET_NAMES = {
-    "2330.TW": "台積電", "5274.TWO": "信驊", "6669.TW": "緯穎",
-    "0050.TW": "元大台灣50", "00878.TW": "國泰永續高股息",
-    "2317.TW": "鴻海", "2454.TW": "聯發科", "2382.TW": "廣達",
-    "3231.TW": "緯創", "NVDA": "NVIDIA", "AAPL": "Apple", "TSLA": "Tesla",
-    "^TWII": "台股加權指數", "^SOX": "費城半導體", "^IXIC": "NASDAQ", "^GSPC": "S&P 500",
+# 涵蓋台股、美股、熱門 ETF 與期貨指數的超完整中文對照庫
+COMMON_ASSET_NAMES = {
+    # 台股上市櫃權值與熱門個股
+    "2330.TW": "台積電",
+    "5274.TWO": "信驊",
+    "6669.TW": "緯穎",
+    "2317.TW": "鴻海",
+    "2454.TW": "聯發科",
+    "2303.TW": "聯電",
+    "2308.TW": "台達電",
+    "2382.TW": "廣達",
+    "3231.TW": "緯創",
+    "3017.TW": "奇鋐",
+    "3008.TW": "大立光",
+    "3661.TWO": "世芯-KY",
+    "3529.TWO": "力旺",
+    "2603.TW": "長榮",
+    "2609.TW": "陽明",
+    "2615.TW": "萬海",
+    "2881.TW": "富邦金",
+    "2882.TW": "國泰金",
+    "2891.TW": "中信金",
+    "2884.TW": "玉山金",
+    "2002.TW": "中鋼",
+    "1301.TW": "台塑",
+    "1303.TW": "南亞",
+    "6446.TW": "藥華藥",
+    "3037.TW": "欣興",
+    "3711.TW": "日月光投控",
+    # 熱門台股 ETF 大全
+    "0050.TW": "元大台灣50",
+    "0056.TW": "元大高股息",
+    "00878.TW": "國泰永續高股息",
+    "00919.TW": "群益台灣精選高息",
+    "00929.TW": "復華台灣科技優息",
+    "00940.TW": "元大臺灣價值高息",
+    "00713.TW": "元大台灣高息低波",
+    "006208.TW": "富邦台50",
+    "00881.TW": "國泰台灣5G+",
+    "00922.TW": "國泰台灣領袖50",
+    "00935.TW": "野村台灣新科技50",
+    # 熱門美股與美股 ETF
+    "AAPL": "蘋果 (Apple)",
+    "NVDA": "輝達 (NVIDIA)",
+    "TSLA": "特斯拉 (Tesla)",
+    "MSFT": "微軟 (Microsoft)",
+    "GOOGL": "谷歌 (Alphabet)",
+    "AMZN": "亞馬遜 (Amazon)",
+    "META": "Meta Platforms",
+    "QQQ": "那斯達克100 ETF",
+    "SPY": "標普500 ETF",
+    "SOXL": "半導體三倍做多",
+    # 期貨與全球指數
+    "^TWII": "台灣加權指數",
+    "^SOX": "費城半導體指數",
+    "^IXIC": "那斯達克指數",
+    "^GSPC": "標普500指數",
+    "^DJI": "道瓊工業指數",
+    "GC=F": "黃金期貨",
+    "CL=F": "紐約原油期貨",
+    "SI=F": "白銀期貨",
 }
 
 TW_SYMBOL_RE = re.compile(r"^\d{4,6}\.(TW|TWO)$", re.I)
 
 def display_name(symbol):
-    return ASSET_NAMES.get(symbol, symbol)
+    if symbol in COMMON_ASSET_NAMES:
+        return COMMON_ASSET_NAMES[symbol]
+    try:
+        t = yf.Ticker(symbol)
+        info = t.info
+        name = info.get("chineseName") or info.get("longName") or info.get("shortName")
+        if name:
+            return name
+    except Exception:
+        pass
+    return symbol
 
 def is_taiwan(symbol):
     return bool(TW_SYMBOL_RE.match(symbol))
@@ -66,7 +131,12 @@ def normalize_symbol(s):
     if not s:
         return ""
     if s.isdigit():
-        return s + ".TW"
+        if len(s) == 4 and s.startswith(("5", "4", "3", "6")):
+            return s + ".TWO"
+        elif len(s) == 5:
+            return s + ".TWO"
+        else:
+            return s + ".TW"
     return s
 
 # -----------------------------
@@ -143,7 +213,7 @@ def add_indicators(df):
     x["BBLower"] = mid - 2 * std
 
     x["VolMA20"] = volume.rolling(20).mean()
-    x["VolRatio"] = volume / x["VolMA20"]
+    x["VolRatio"] = volume / x["VolMA20"].replace(0, np.nan)
 
     x["High20"] = high.rolling(20).max()
     x["Low20"] = low.rolling(20).min()
@@ -289,7 +359,7 @@ def market_regime():
 # -----------------------------
 @st.cache_data(ttl=900, show_spinner=False)
 def get_twse_institutional(symbol, date_str=None):
-    if requests is None or not symbol.endswith(".TW"):
+    if requests is None or not symbol.endswith((".TW", ".TWO")):
         return None
 
     code = symbol.split(".")[0]
@@ -592,7 +662,7 @@ def render_signal(score):
 # -----------------------------
 # Sidebar
 # -----------------------------
-st.sidebar.title("⚙️ 33 V3.0")
+st.sidebar.title("⚙️ 33 專業操盤系統 V3.0")
 page = st.sidebar.radio(
     "功能",
     [
@@ -609,40 +679,43 @@ page = st.sidebar.radio(
 st.sidebar.divider()
 capital = st.sidebar.number_input("交易資金", min_value=0.0, value=300000.0, step=10000.0)
 risk_pct = st.sidebar.number_input("單筆最大風險 %", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
+
+st.sidebar.markdown("### 📋 自選股管理")
+st.sidebar.caption("支援全球任意台股（如 2330, 5274）、美股（如 AAPL, NVDA）、ETF（如 0050, 00878）、期貨（如 ^TWII）。")
 watch_text = st.sidebar.text_area(
-    "自選股（逗號或換行）",
-    value=",".join(DEFAULT_WATCHLIST)
+    "輸入自選股（逗號、空格或換行分隔）",
+    value=",".join(DEFAULT_WATCHLIST),
+    height=120
 )
 watchlist = []
-for s in re.split(r"[,\n ]+", watch_text):
+for s in re.split(r"[,\n\s]+", watch_text):
     s = normalize_symbol(s)
     if s and s not in watchlist:
         watchlist.append(s)
 
-st.sidebar.caption("資料來源：Yahoo Finance；三大法人優先嘗試 TWSE 官方 T86。")
-st.sidebar.caption("報價可能延遲；系統不保證即時成交價。")
+st.sidebar.caption("資料來源：Yahoo Finance & TWSE。")
 
 # -----------------------------
 # Page: Overview
 # -----------------------------
 if page == "🏠 總覽":
     st.title("📈 33 專業操盤系統 V3.0")
-    st.caption("量化規則引擎：技術面＋成交量＋突破＋市場環境＋風險管理。")
+    st.caption("全球資產支援：台股上市櫃、美股、期貨、ETF 萬用查詢引擎。")
 
     regime_df, regime = market_regime()
     c1, c2, c3 = st.columns(3)
     c1.metric("市場環境", regime)
-    c2.metric("自選股數", len(watchlist))
+    c2.metric("自選追蹤數", len(watchlist))
     c3.metric("風險設定", f"{risk_pct:.1f}% / 筆")
 
     if not regime_df.empty:
-        st.subheader("🌏 市場環境")
+        st.subheader("🌏 市場環境指標")
         show = regime_df.copy()
         show["20日報酬"] = show["20日報酬"].map(fmt_pct)
         show["收盤"] = show["收盤"].map(lambda v: f"{v:,.2f}")
         st.dataframe(show, use_container_width=True, hide_index=True)
 
-    st.subheader("📊 自選股量化快照")
+    st.subheader("📊 自選股量化即時快照")
     rows = []
     for sym in watchlist:
         df = get_history(sym, "1y")
@@ -677,86 +750,93 @@ if page == "🏠 總覽":
 # -----------------------------
 elif page == "🤖 量化選股":
     st.title("🤖 量化選股中心")
-    st.info("分數為規則式量化評分，不是預測模型；不使用硬編碼的『今日漲跌機率』。")
+    st.info("動態掃描您左側欄輸入的所有自選全球標的。")
 
-    rows = []
-    progress = st.progress(0)
-    for i, sym in enumerate(watchlist):
-        df = get_history(sym, "1y")
-        sc = score_asset(df)
-        if not df.empty:
-            x = add_indicators(df)
-            r = x.iloc[-1]
-            rows.append({
-                "代碼": sym,
-                "名稱": display_name(sym),
-                "收盤": r["Close"],
-                "日漲跌": r["Return1D"],
-                "5日": r["Return5D"],
-                "20日": r["Return20D"],
-                "RSI": sc["rsi"],
-                "量比": sc["vol_ratio"],
-                "趨勢": sc["trend"],
-                "動能": sc["momentum"],
-                "量能": sc["volume"],
-                "突破": sc["breakout"],
-                "風險": sc["risk"],
-                "總分": sc["score"],
-                "訊號": sc["signal"],
-            })
-        progress.progress((i + 1) / max(len(watchlist), 1))
-    progress.empty()
-
-    result = pd.DataFrame(rows)
-    if result.empty:
-        st.warning("目前沒有足夠資料。")
+    if not watchlist:
+        st.warning("請於左側輸入至少一個自選股代號。")
     else:
-        sort_col = st.selectbox("排序", ["總分", "量能", "突破", "動能", "趨勢", "5日"])
-        result = result.sort_values(sort_col, ascending=False)
-        st.dataframe(
-            result.style.format({
-                "收盤": "{:,.2f}",
-                "日漲跌": "{:.2%}",
-                "5日": "{:.2%}",
-                "20日": "{:.2%}",
-                "RSI": "{:.1f}",
-                "量比": "{:.2f}",
-                "趨勢": "{:.1f}",
-                "動能": "{:.1f}",
-                "量能": "{:.1f}",
-                "突破": "{:.1f}",
-                "風險": "{:.1f}",
-                "總分": "{:.1f}",
-            }),
-            use_container_width=True,
-        )
+        rows = []
+        progress = st.progress(0)
+        for i, sym in enumerate(watchlist):
+            df = get_history(sym, "1y")
+            sc = score_asset(df)
+            if not df.empty:
+                x = add_indicators(df)
+                r = x.iloc[-1]
+                rows.append({
+                    "代碼": sym,
+                    "名稱": display_name(sym),
+                    "收盤": r["Close"],
+                    "日漲跌": r["Return1D"],
+                    "5日": r["Return5D"],
+                    "20日": r["Return20D"],
+                    "RSI": sc["rsi"],
+                    "量比": sc["vol_ratio"],
+                    "趨勢": sc["trend"],
+                    "動能": sc["momentum"],
+                    "量能": sc["volume"],
+                    "突破": sc["breakout"],
+                    "風險": sc["risk"],
+                    "總分": sc["score"],
+                    "訊號": sc["signal"],
+                })
+            progress.progress((i + 1) / max(len(watchlist), 1))
+        progress.empty()
+
+        result = pd.DataFrame(rows)
+        if result.empty:
+            st.warning("目前沒有足夠資料。")
+        else:
+            sort_col = st.selectbox("排序依據", ["總分", "量能", "突破", "動能", "趨勢", "5日"])
+            result = result.sort_values(sort_col, ascending=False)
+            st.dataframe(
+                result.style.format({
+                    "收盤": "{:,.2f}",
+                    "日漲跌": "{:.2%}",
+                    "5日": "{:.2%}",
+                    "20日": "{:.2%}",
+                    "RSI": "{:.1f}",
+                    "量比": "{:.2f}",
+                    "趨勢": "{:.1f}",
+                    "動能": "{:.1f}",
+                    "量能": "{:.1f}",
+                    "突破": "{:.1f}",
+                    "風險": "{:.1f}",
+                    "總分": "{:.1f}",
+                }),
+                use_container_width=True,
+            )
 
 # -----------------------------
 # Page: Deep analysis
 # -----------------------------
 elif page == "🔍 個股深度分析":
     st.title("🔍 個股深度分析")
-    symbol = normalize_symbol(st.selectbox(
-        "選擇股票",
-        watchlist if watchlist else DEFAULT_WATCHLIST
-    ))
+    
+    col_input, col_mode = st.columns([2, 1])
+    with col_input:
+        manual_input = st.text_input("輸入任意全球代號查詢（例如: 5274, 2330, NVDA, 0050, QQQ, ^TWII）", value="5274")
+    
+    target_symbol = normalize_symbol(manual_input) if manual_input else (watchlist[0] if watchlist else "2330.TW")
 
-    df = get_history(symbol, "2y")
+    df = get_history(target_symbol, "2y")
     if df.empty:
-        st.error("無法取得資料。")
+        st.error(f"無法取得代號 `{target_symbol}` 的資料，請確認代號是否正確。")
     else:
         x = add_indicators(df)
         r = x.iloc[-1]
         sc = score_asset(df)
+        d_name = display_name(target_symbol)
 
+        st.markdown(f"### 📌 標的：{d_name} (`{target_symbol}`) 最新報價")
         c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("收盤", f"{r['Close']:,.2f}")
-        c2.metric("量化分數", f"{sc['score']:.1f}")
-        c3.metric("RSI", f"{r['RSI14']:.1f}")
-        c4.metric("量比", f"{r['VolRatio']:.2f}x")
-        c5.metric("訊號", sc["signal"])
+        c1.metric("收盤價", f"{r['Close']:,.2f}")
+        c2.metric("量化總分", f"{sc['score']:.1f}")
+        c3.metric("RSI (14)", f"{r['RSI14']:.1f}")
+        c4.metric("成交量比", f"{r['VolRatio']:.2f}x")
+        c5.metric("量化訊號", sc["signal"])
 
-        st.subheader("技術結構")
+        st.subheader("技術結構數據")
         tech = pd.DataFrame({
             "指標": ["MA5", "MA20", "MA60", "MA120", "MA240", "BB上軌", "BB中軌", "BB下軌", "ATR14", "20日高", "20日低"],
             "數值": [r.get(k, np.nan) for k in ["MA5","MA20","MA60","MA120","MA240","BBUpper","BBMid","BBLower","ATR14","High20","Low20"]]
@@ -764,67 +844,66 @@ elif page == "🔍 個股深度分析":
         tech["數值"] = tech["數值"].round(2)
         st.dataframe(tech, use_container_width=True, hide_index=True)
 
-        st.subheader("價格與均線")
+        st.subheader("歷史價格與均線走勢")
         chart_df = x[["Close", "MA20", "MA60", "MA120"]].dropna(how="all")
         st.line_chart(chart_df)
 
-        st.subheader("三大法人（若 TWSE 官方資料可取得）")
-        inst = institutional_history(symbol, 5)
+        st.subheader("三大法人動向（台股上市櫃官方 T86）")
+        inst = institutional_history(target_symbol, 5)
         if inst.empty:
-            st.info("目前無法取得此標的的 TWSE 三大法人資料；系統不填入推測數字。")
+            st.info("此標的非台股上市櫃或暫無官方法人資料可供檢索。")
         else:
             st.dataframe(inst, use_container_width=True, hide_index=True)
 
         st.subheader("資料時間")
-        st.write(f"最後交易資料：{x.index[-1].strftime('%Y-%m-%d')}")
+        st.write(f"最後交易資料日期：{x.index[-1].strftime('%Y-%m-%d')}")
 
 # -----------------------------
 # Page: Trade plan
 # -----------------------------
 elif page == "🎯 交易計畫":
-    st.title("🎯 自動交易計畫")
-    symbol = normalize_symbol(st.selectbox(
-        "選擇標的",
-        watchlist if watchlist else DEFAULT_WATCHLIST,
-        key="plan_symbol"
-    ))
-    df = get_history(symbol, "2y")
+    st.title("🎯 自動交易計畫與風險規劃")
+    
+    plan_input = st.text_input("輸入欲建立計畫的代號", value="2330.TW")
+    plan_sym = normalize_symbol(plan_input)
+    
+    df = get_history(plan_sym, "2y")
     plan = make_trade_plan(df, capital=capital, risk_pct=risk_pct)
 
     if plan is None:
         st.error("資料不足，無法建立交易計畫。")
     else:
+        st.subheader(f"📌 {display_name(plan_sym)} (`{plan_sym}`) 操盤執行框架")
         c = st.columns(4)
         c[0].metric("現價", f"{plan['現價']:,.2f}")
-        c[1].metric("停損", f"{plan['停損']:,.2f}")
-        c[2].metric("TP1", f"{plan['TP1']:,.2f}")
-        c[3].metric("TP2", f"{plan['TP2']:,.2f}")
+        c[1].metric("建議停損", f"{plan['停損']:,.2f}")
+        c[2].metric("第一停利 (TP1)", f"{plan['TP1']:,.2f}")
+        c[3].metric("第二停利 (TP2)", f"{plan['TP2']:,.2f}")
 
-        st.subheader("📌 執行框架")
         table = pd.DataFrame([
             ["回檔進場區", plan["回檔進場區"]],
             ["突破確認價", f"{plan['突破確認價']:,.2f}"],
-            ["支撐", f"{plan['支撐']:,.2f}"],
-            ["壓力", f"{plan['壓力']:,.2f}"],
-            ["TP1 R:R", f"{plan['RR1']:.2f}"],
-            ["TP2 R:R", f"{plan['RR2']:.2f}"],
+            ["關鍵支撐", f"{plan['支撐']:,.2f}"],
+            ["關鍵壓力", f"{plan['壓力']:,.2f}"],
+            ["TP1 風險報酬比 (R:R)", f"{plan['RR1']:.2f}"],
+            ["TP2 風險報酬比 (R:R)", f"{plan['RR2']:.2f}"],
             ["單股風險", f"{plan['單股風險']:,.2f}"],
-            ["風險金額", f"{plan['風險金額']:,.0f}"],
+            ["本筆風險金額", f"{plan['風險金額']:,.0f}"],
             ["建議股數", f"{plan['建議股數']:,}"],
-            ["失效條件", plan["失效條件"]],
+            ["部位失效條件", plan["失效條件"]],
         ], columns=["項目", "數值"])
         st.dataframe(table, use_container_width=True, hide_index=True)
 
-        st.warning("以上是依歷史資料建立的交易框架，不是保證獲利的買賣指令；實際成交、滑價與盤中事件需另行確認。")
+        st.warning("以上計畫依歷史量價與波動率計算，實際進出請務必嚴格執行停損紀律。")
 
 # -----------------------------
 # Page: Backtest
 # -----------------------------
 elif page == "🧪 策略回測":
     st.title("🧪 策略回測實驗室")
-    symbol = normalize_symbol(st.selectbox(
-        "標的", watchlist if watchlist else DEFAULT_WATCHLIST, key="bt_symbol"
-    ))
+    bt_input = st.text_input("輸入回測標的代號", value="2330.TW")
+    bt_sym = normalize_symbol(bt_input)
+    
     fast = st.slider("短均線", 5, 50, 20)
     slow = st.slider("長均線", 30, 250, 60)
     fee = st.number_input("手續費＋稅等成本（bps）", 0.0, 100.0, 10.0)
@@ -833,10 +912,10 @@ elif page == "🧪 策略回測":
     if fast >= slow:
         st.error("短均線必須小於長均線。")
     else:
-        df = get_history(symbol, "5y")
+        df = get_history(bt_sym, "5y")
         stats, bt = backtest_ma(df, fast, slow, fee, slippage)
         if stats is None:
-            st.error("資料不足。")
+            st.error("資料不足，無法回測。")
         else:
             cols = st.columns(4)
             cols[0].metric("策略報酬", fmt_pct(stats["策略累積報酬"]))
@@ -845,10 +924,10 @@ elif page == "🧪 策略回測":
             cols[3].metric("Profit Factor", f"{stats['Profit Factor']:.2f}" if pd.notna(stats["Profit Factor"]) else "—")
 
             st.write({
-                "買進持有": fmt_pct(stats["買進持有報酬"]),
-                "Sharpe": round(stats["Sharpe"], 2) if pd.notna(stats["Sharpe"]) else None,
+                "買進持有報酬": fmt_pct(stats["買進持有報酬"]),
+                "夏普比率 (Sharpe)": round(stats["Sharpe"], 2) if pd.notna(stats["Sharpe"]) else None,
                 "年化報酬估計": fmt_pct(stats["年化報酬估計"]),
-                "交易次數": stats["交易次數"],
+                "總交易次數": stats["交易次數"],
             })
             st.line_chart(bt[["Equity", "BuyHold"]])
 
@@ -857,11 +936,12 @@ elif page == "🧪 策略回測":
 # -----------------------------
 elif page == "🛡️ 投資組合風險":
     st.title("🛡️ 投資組合風險管理")
-    st.caption("輸入持倉後估算權重、集中度、相關性與歷史壓力情境。")
+    st.caption("您可以自由輸入任意台美股、ETF、期貨持倉來估算整體權重與相關性。")
 
     default_rows = pd.DataFrame([
-        {"代碼": "2330.TW", "數量": 100, "成本": 1000.0},
-        {"代碼": "0050.TW", "數量": 100, "成本": 200.0},
+        {"代碼": "2330.TW", "數量": 1000, "成本": 900.0},
+        {"代碼": "0050.TW", "數量": 2000, "成本": 180.0},
+        {"代碼": "NVDA", "數量": 50, "成本": 120.0},
     ])
     holdings_df = st.data_editor(
         default_rows,
@@ -891,37 +971,35 @@ elif page == "🛡️ 投資組合風險":
             st.error("無法取得持倉標的資料。")
         else:
             c1, c2, c3 = st.columns(3)
-            c1.metric("組合市值", f"{pr['total_value']:,.0f}")
-            c2.metric("年化波動估計", fmt_pct(pr["annual_vol"]))
+            c1.metric("組合總市值", f"{pr['total_value']:,.0f}")
+            c2.metric("年化波動率估計", fmt_pct(pr["annual_vol"]))
             c3.metric("HHI 集中度", f"{pr['hhi']:.3f}")
 
-            st.subheader("持倉權重")
+            st.subheader("持倉權重明細")
             st.dataframe(pr["table"], use_container_width=True, hide_index=True)
 
             if not pr["corr"].empty:
-                st.subheader("歷史報酬相關性")
+                st.subheader("歷史報酬相關性矩陣")
                 st.dataframe(pr["corr"].round(2), use_container_width=True)
 
-            st.subheader("歷史壓力情境")
-            p = pr["table"].copy()
+            st.subheader("歷史壓力情境模擬")
             scenarios = [-0.10, -0.20, -0.30]
             rows = []
             for shock in scenarios:
                 rows.append({
-                    "情境": f"全部持倉同步 {shock:.0%}",
-                    "估算損失": pr["total_value"] * shock,
-                    "剩餘市值": pr["total_value"] * (1 + shock),
+                    "情境假設": f"全部持倉同步下挫 {shock:.0%}",
+                    "估算損失金額": pr["total_value"] * shock,
+                    "壓力後剩餘市值": pr["total_value"] * (1 + shock),
                 })
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-            st.caption("壓力情境是假設情境，不代表未來實際跌幅或機率。")
 
 # -----------------------------
 # Page: Journal
 # -----------------------------
 elif page == "📒 交易日誌":
     st.title("📒 交易日誌分析")
-    st.write("上傳 CSV；系統會嘗試辨識 P/L、損益或 進場價／出場價／數量欄位。")
-    file = st.file_uploader("交易紀錄 CSV", type=["csv"])
+    st.write("上傳您的交易紀錄 CSV 檔，系統將自動分析勝率、損益與 Profit Factor。")
+    file = st.file_uploader("上傳交易紀錄 CSV", type=["csv"])
 
     if file:
         try:
@@ -932,24 +1010,23 @@ elif page == "📒 交易日誌":
             else:
                 stats, clean = analyzed
                 c = st.columns(4)
-                c[0].metric("交易筆數", stats["交易筆數"])
+                c[0].metric("總交易筆數", stats["交易筆數"])
                 c[1].metric("勝率", fmt_pct(stats["勝率"]))
-                c[2].metric("總損益", f"{stats['總損益']:,.2f}")
+                c[2].metric("總累積損益", f"{stats['總損益']:,.2f}")
                 c[3].metric("Profit Factor", f"{stats['Profit Factor']:.2f}" if pd.notna(stats["Profit Factor"]) else "—")
                 st.dataframe(clean, use_container_width=True, hide_index=True)
 
-                st.subheader("可觀察的交易行為")
+                st.subheader("操盤行為診斷與建議")
                 if stats["勝率"] < 0.45:
-                    st.write("• 勝率偏低：可進一步檢查進場條件、停損執行與交易頻率。")
+                    st.write("• 勝率偏低：建議檢視進場條件的過濾機制與停損點執行狀況。")
                 if pd.notna(stats["平均虧損"]) and pd.notna(stats["平均獲利"]) and abs(stats["平均虧損"]) > stats["平均獲利"]:
-                    st.write("• 平均虧損大於平均獲利：可檢查風險報酬比與停損紀律。")
+                    st.write("• 平均虧損大於平均獲利：建議優化風險報酬比，讓獲利部位跑得更遠。")
                 if stats["交易筆數"] < 20:
-                    st.write("• 樣本數少於 20 筆，暫時不宜從統計結果下強結論。")
+                    st.write("• 樣本數小於 20 筆，統計顯著性尚不足。")
         except Exception as e:
             st.error(f"解析交易日誌發生錯誤：{str(e)}")
 
 st.divider()
 st.caption(
-    "33 V3.0：量化評分與回測皆以歷史資料計算；不保證未來績效。"
-    " 若資料源失敗，系統應顯示資料不足，而不是補入假數字。"
+    "33 專業操盤系統 V3.0：支援全球台美股、期貨與 ETF 動態查詢與量化風控。"
 )
