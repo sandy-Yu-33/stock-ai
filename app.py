@@ -110,7 +110,7 @@ def get_div_info(symbol):
     return "依公司公告為準", "全球上市企業與金融商品"
 
 def is_taiwan(symbol):
-    return bool(TW_SYMBOL_RE.match(symbol))
+    return bool(TW_SYMBOL_RE.match(symbol)) or symbol.endswith((".TW", ".TWO"))
 
 def normalize_symbol(s):
     s = str(s).strip().upper()
@@ -125,35 +125,46 @@ def normalize_symbol(s):
             return s + ".TW"
     return s
 
+# -----------------------------
+# 智慧強固型資料下載（自動容錯與重試）
+# -----------------------------
 @st.cache_data(ttl=300, show_spinner=False)
 def get_history(symbol, period="1y", interval="1d"):
-    try:
-        df = yf.download(
-            symbol,
-            period=period,
-            interval=interval,
-            auto_adjust=False,
-            progress=False,
-            threads=False,
-        )
-        if df is None or df.empty:
-            return pd.DataFrame()
-        if isinstance(df.columns, pd.MultiIndex):
-            try:
-                df = df.xs(symbol, axis=1, level=-1)
-            except Exception:
-                df.columns = df.columns.get_level_values(0)
-        df = df.rename(columns=str.title)
-        needed = ["Open", "High", "Low", "Close", "Volume"]
-        for c in needed:
-            if c not in df.columns:
-                return pd.DataFrame()
-        df = df[needed].copy()
-        df = df.dropna(subset=["Close"])
-        df.index = pd.to_datetime(df.index)
-        return df
-    except Exception:
-        return pd.DataFrame()
+    symbols_to_try = [symbol]
+    if symbol.isdigit():
+        symbols_to_try = [symbol + ".TW", symbol + ".TWO"]
+    elif symbol.endswith(".TW"):
+        symbols_to_try = [symbol, symbol.replace(".TW", ".TWO")]
+    elif symbol.endswith(".TWO"):
+        symbols_to_try = [symbol, symbol.replace(".TWO", ".TW")]
+
+    for sym in symbols_to_try:
+        try:
+            df = yf.download(
+                sym,
+                period=period,
+                interval=interval,
+                auto_adjust=False,
+                progress=False,
+                threads=False,
+            )
+            if df is not None and not df.empty:
+                if isinstance(df.columns, pd.MultiIndex):
+                    try:
+                        df = df.xs(sym, axis=1, level=-1)
+                    except Exception:
+                        df.columns = df.columns.get_level_values(0)
+                df = df.rename(columns=str.title)
+                needed = ["Open", "High", "Low", "Close", "Volume"]
+                if all(c in df.columns for c in needed):
+                    df = df[needed].copy()
+                    df = df.dropna(subset=["Close"])
+                    if not df.empty:
+                        df.index = pd.to_datetime(df.index)
+                        return df
+        except Exception:
+            continue
+    return pd.DataFrame()
 
 def add_indicators(df):
     x = df.copy()
@@ -463,6 +474,7 @@ capital = st.sidebar.number_input("交易資金", min_value=0.0, value=300000.0,
 risk_pct = st.sidebar.number_input("單筆最大風險 %", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
 
 st.sidebar.markdown("### 📋 自選股管理")
+st.sidebar.caption("支援直接輸入純數字（例：2330, 5274, 00878）或美股代號。")
 watch_text = st.sidebar.text_area(
     "輸入自選代號（逗號、空格或換行）",
     value=",".join(DEFAULT_WATCHLIST),
@@ -474,34 +486,26 @@ for s in re.split(r"[,\n\s]+", watch_text):
     if s and s not in watchlist:
         watchlist.append(s)
 
-st.sidebar.caption("資料來源：Yahoo Finance & TWSE 官方授權通道。")
+st.sidebar.caption("資料來源：Yahoo Finance 萬用智慧通道。")
 
 # -----------------------------
-# Page: Daily News & Market Pulse (每日即時新聞與盤勢)
+# Page: Daily News & Market Pulse
 # -----------------------------
 if page == "📰 每日即時新聞與盤勢":
     st.title("📰 每日即時新聞與股市大小事")
     st.markdown(f"**更新日期**：`{datetime.now().strftime('%Y-%m-%d')}` | 即時掌握全球金融市場與台股動態脈動。")
 
     st.subheader("🔥 今日財經頭條與市場焦點")
-    
     st.markdown("""
     <div class="news-card">
         <h4>🚀 台股量能突破兆元站穩 47,000 點大關！電子權值與記憶體族群強勢領軍</h4>
         <p class="small-note">發布時間：今日盤勢總結 | 來源：財經通訊</p>
-        <p>台股本周延續強勢格局，大盤指數亮眼收高。晶圓代工雙雄台積電（2330）、聯電（2303）帶頭上攻，配合記憶體族群（華邦電、南亞科等）與高價千金股全面引爆，市場成交量再度重回新台幣 1 兆元以上，顯示資金輪動快速且買氣熱絡。</p>
+        <p>台股本周延續強勢格局，大盤指數亮眼收高。晶圓代工雙雄台積電（2330）、聯電（2303）帶頭上攻，配合記憶體族群與高價千金股全面引爆，市場成交量再度重回新台幣 1 兆元以上。</p>
     </div>
-    
-    <div class="news-card">
-        <h4>💡 央行信用管制微調 營建股迎來解套契機？</h4>
-        <p class="small-note">發布時間：最新政策解讀 | 來源：總經快訊</p>
-        <p>隨著房市信用管制實施近兩年，央行考量整體房貸集中度有所下降，宣布適度鬆綁選擇性信用管制。消息一出激勵營建類股表現，多檔指標個股展現抗跌與彈升力道。</p>
-    </div>
-
     <div class="news-card">
         <h4>⚡ 國際半導體與 AI 供應鏈最新動態：輝達 (NVDA) 需求持續強勁</h4>
         <p class="small-note">發布時間：國際財經 | 來源：Wall Street 觀察</p>
-        <p>美國聯準會（Fed）利率政策底定後，美股主要指數（費城半導體、那斯達克）同步走揚。AI 晶片龍頭輝達（NVDA）拉貨動能不減，台灣相關伺服器代工（廣達、緯穎、鴻海）與散熱供應鏈後市持續備受法人關注。</p>
+        <p>美股主要指數同步走揚。AI 晶片龍頭輝達（NVDA）拉貨動能不減，台灣相關伺服器代工（廣達、緯穎、鴻海）與散熱供應鏈後市持續備受法人關注。</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -514,12 +518,10 @@ if page == "📰 每日即時新聞與盤勢":
         st.dataframe(show, use_container_width=True, hide_index=True)
 
 # -----------------------------
-# Page: Taiwan 13:00 Overnight Scanner (台股 13:00 隔日沖雷達)
+# Page: Taiwan 13:00 Overnight Scanner
 # -----------------------------
 elif page == "🕒 台股 13:00 隔日沖雷達":
     st.title("🕒 台股 13:00 後隔日沖強勢股雷達")
-    st.markdown("專為台股下午 1 點過後盤勢收尾設計。系統自動掃描尾盤帶量強勢鎖碼、具備隔日開高慣性之優質隔日沖標的。")
-
     tw_pool = ["2330.TW", "5274.TWO", "6669.TW", "2454.TW", "2317.TW", "2603.TW", "3231.TW", "3017.TW", "3008.TW", "3661.TWO"]
     
     rows = []
@@ -531,33 +533,26 @@ elif page == "🕒 台股 13:00 隔日沖雷達":
             chg = ((c_p - p_p) / p_p) * 100
             vol_ratio = float(df["Volume"].iloc[-1] / df["Volume"].rolling(5).mean().iloc[-1]) if pd.notna(df["Volume"].rolling(5).mean().iloc[-1]) else 1.0
             sr = calculate_support_resistance(df)
-            
-            if sr and chg > 1.0 and vol_ratio > 1.2:
+            if sr and chg > 1.0:
                 rows.append({
                     "代碼": sym,
                     "名稱": display_name(sym),
                     "收盤現價": f"${c_p:,.2f}",
                     "今日漲幅": f"{chg:+.2f}%",
-                    "量能放大倍數": f"{vol_ratio:.2f}x",
                     "隔日參考買進": f"${c_p:,.2f}",
                     "隔日停利目標": f"${sr['第一壓力']:,.2f}",
                     "嚴格防守停損": f"${sr['第一支撐']:,.2f}",
-                    "隔日沖評級": "🔥 強勢鎖碼 (極佳)" if chg > 3.0 and vol_ratio > 1.5 else "⚡ 帶量續強 (良好)"
                 })
-    
     if rows:
-        st.success("成功篩選出符合 13:00 後隔日沖條件之強勢股！")
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     else:
-        st.info("目前盤勢動能較溫和，暫無符合高標準的隔日沖標的。")
+        st.info("目前無符合條件之隔日沖標的。")
 
 # -----------------------------
-# Page: US 04:00 Intraday Scanner (美股 04:00 當日當沖雷達)
+# Page: US 04:00 Intraday Scanner
 # -----------------------------
 elif page == "⏰ 美股 04:00 當日當沖雷達":
     st.title("⏰ 美股 04:00 收盤後當日當沖雷達")
-    st.markdown("專為美股收盤後（清晨 04:00）或盤前設計。系統自動篩選出波動率高、成交量爆發、適合當日進行極速當沖的熱門美股與 ETF。")
-
     us_pool = ["NVDA", "AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "META", "QQQ", "SPY", "SOXL"]
     
     rows = []
@@ -567,35 +562,27 @@ elif page == "⏰ 美股 04:00 當日當沖雷達":
             c_p = float(df["Close"].iloc[-1])
             p_p = float(df["Close"].iloc[-2])
             chg = ((c_p - p_p) / p_p) * 100
-            vol_ratio = float(df["Volume"].iloc[-1] / df["Volume"].rolling(5).mean().iloc[-1]) if pd.notna(df["Volume"].rolling(5).mean().iloc[-1]) else 1.0
             sr = calculate_support_resistance(df)
-            
             if sr and abs(chg) > 1.5:
                 rows.append({
                     "代碼": sym,
                     "名稱": display_name(sym),
                     "收盤價": f"${c_p:,.2f}",
                     "漲跌幅": f"{chg:+.2f}%",
-                    "量能比": f"{vol_ratio:.2f}x",
                     "建議當沖進場": f"${sr['建議進場點']:,.2f}",
                     "當沖短線停利": f"${sr['第一壓力']:,.2f}",
                     "當沖嚴格停損": f"${sr['嚴格停損點']:,.2f}",
-                    "當沖屬性": "🚀 波動劇烈 / 適合突破追價" if chg > 0 else "🔻 弱勢下殺 / 適合反彈空"
                 })
-    
     if rows:
-        st.success("成功篩選出符合美股當沖高波動條件之熱門標的！")
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     else:
-        st.info("今日美股波動率較平緩，建議觀察盤前動態。")
+        st.info("目前無符合條件之美股當沖標的。")
 
 # -----------------------------
 # Page: Overview
 # -----------------------------
 elif page == "🏠 總覽":
     st.title("📈 33 專業操盤系統 V3.0")
-    st.markdown("歡迎回來！本系統已全面整合 **支撐壓力**、**13:00 隔日沖**、**04:00 美股當沖** 與 **財報新聞**。")
-
     regime_df, regime = market_regime()
     c1, c2, c3 = st.columns(3)
     c1.metric("市場宏觀環境", regime)
@@ -639,12 +626,12 @@ elif page == "🤖 AI 量化選股":
 # -----------------------------
 elif page == "🔍 個股深度分析 (支撐壓力/買賣點)":
     st.title("🔍 個股深度分析與精準操盤點位")
-    manual_input = st.text_input("輸入任意全球代號查詢（例: 5274, 2330, NVDA, 00878, ^TWII）", value="5274")
+    manual_input = st.text_input("輸入任意全球代號（例: 2330, 5274, 2603, NVDA, 00878）", value="2330")
     target_symbol = normalize_symbol(manual_input) if manual_input else "2330.TW"
 
     df = get_history(target_symbol, "2y")
     if df.empty:
-        st.error(f"無法取得代號 `{target_symbol}` 的資料。")
+        st.error(f"無法取得代號 `{target_symbol}` 的資料，請確認代號是否正確（台股上市櫃可直接輸入數字如 2330 或 5274）。")
     else:
         x = add_indicators(df)
         r = x.iloc[-1]
@@ -697,12 +684,15 @@ elif page == "🔍 個股深度分析 (支撐壓力/買賣點)":
                 </div>
                 """, unsafe_allow_html=True)
 
+        st.subheader("價格與均線走勢圖")
+        st.line_chart(x[["Close", "MA20", "MA60"]].dropna(how="all"))
+
 # -----------------------------
 # Page: Trade Plan
 # -----------------------------
 elif page == "🎯 交易計畫與風控":
     st.title("🎯 自動交易計畫與部位大小計算")
-    plan_sym = normalize_symbol(st.text_input("輸入代號", value="2330.TW"))
+    plan_sym = normalize_symbol(st.text_input("輸入代號", value="2330"))
     df = get_history(plan_sym, "2y")
     sr = calculate_support_resistance(df)
     if sr:
@@ -731,4 +721,4 @@ elif page == "📒 交易日誌":
     st.file_uploader("上傳 CSV", type=["csv"])
 
 st.divider()
-st.caption("33 專業操盤系統 V3.0：支援台股 13:00 隔日沖、美股 04:00 當沖與全方位風控。")
+st.caption("33 專業操盤系統 V3.0：支援全台股智慧容錯萬用查詢、支撐壓力與短線當沖。")
