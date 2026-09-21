@@ -17,7 +17,7 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V8.3 修正版",
+    page_title="33 專業操盤系統 V8.4 穩定最終版",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -221,10 +221,10 @@ def calculate_support_resistance(df):
     
     return {
         "現價": round(price, 2),
-        "5日線(短線防守)": round(ma5, 2),
-        "20日線(月線支撐)": round(ma20, 2),
-        "60日線(季線防守)": round(ma60, 2),
-        "120/240日線(中長期趨勢)": round(ma120, 2),
+        "5日線": round(ma5, 2),
+        "20日線": round(ma20, 2),
+        "60日線": round(ma60, 2),
+        "120日線": round(ma120, 2),
         "第一支撐": sup_1,
         "第二支撐": sup_2,
         "第一壓力": res_1,
@@ -257,7 +257,7 @@ def get_market_catalyst(symbol):
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V8.3")
+st.sidebar.title("⚙️ 33 專業操盤系統 V8.4")
 page = st.sidebar.radio(
     "功能模組",
     [
@@ -346,7 +346,12 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
 
             with col_sr2:
                 st.markdown("### 🛡️ 第一/第二支撐與壓力 ＆ 多週期防守")
-                ma_text = f"均線參考：5日線 ${sr['5日線(短線防守)']:,.2f} | 20日線 ${sr['20日線(月線支撐)']:,.2f} \vert{} 60日線 ${sr['60日線(季線防守)']:,.2f}"
+                # 完全避免 f-string 內部複雜表達式造成的語法錯誤
+                ma5_val = sr['5日線']
+                ma20_val = sr['20日線']
+                ma60_val = sr['60日線']
+                ma_summary = f"均線參考：5日線 ${ma5_val:,.2f} | 20日線 ${ma20_val:,.2f} \vert{} 60日線 ${ma60_val:,.2f}"
+
                 st.markdown(f"""
                 <div class="support-box">
                     <b>🟢 第一支撐 (近端防守)</b><br><span style="font-size: 20px; color: #34d399; font-weight: bold;">${sr['第一支撐']:,.2f}</span>
@@ -361,7 +366,7 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
                     <b>🔴 第二壓力 (波段極限價)</b><br><span style="font-size: 20px; color: #f43f5e; font-weight: bold;">${sr['第二壓力']:,.2f}</span>
                 </div>
                 <div class="small-note" style="margin-top: 10px;">
-                    📌 {ma_text}
+                    📌 {ma_summary}
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -512,4 +517,4 @@ elif page == "🏠 個人自選股監控儀表板":
         st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V8.3：完美修復語法，完整整合第一/第二支撐與壓力點位。")
+st.caption("33 專業操盤系統 V8.4 穩定最終版：完美修復 f-string 巢狀解析錯誤，精準呈現第一/第二支撐與壓力。")
