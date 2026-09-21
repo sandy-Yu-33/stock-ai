@@ -17,7 +17,7 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V8.1 完整保留版",
+    page_title="33 專業操盤系統 V8.2 語法修復版",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -200,7 +200,7 @@ def add_indicators(df):
     return x
 
 # -------------------------------------------------------------
-# 🎯 多週期與精準支撐壓力計算 (新增第一壓力、第二壓力、第一支撐、第二支撐)
+# 🎯 多週期與精準支撐壓力計算
 # -------------------------------------------------------------
 def calculate_support_resistance(df):
     if df.empty or len(df) < 20:
@@ -214,7 +214,6 @@ def calculate_support_resistance(df):
     ma60 = float(r["MA60"]) if pd.notna(r["MA60"]) else price
     ma120 = float(r["MA120"]) if pd.notna(r["MA120"]) else price
 
-    # 專家級支撐與壓力計算
     sup_1 = round(min(ma5, ma20), 2)
     sup_2 = round(min(ma60, ma120), 2)
     res_1 = round(max(price * 1.02, ma20 * 1.04), 2)
@@ -258,7 +257,7 @@ def get_market_catalyst(symbol):
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V8.1")
+st.sidebar.title("⚙️ 33 專業操盤系統 V8.2")
 page = st.sidebar.radio(
     "功能模組",
     [
@@ -286,7 +285,7 @@ watchlist = [s.strip() for s in re.split(r"[,\n\s]+", watch_text) if s.strip()]
 # -----------------------------
 if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)":
     st.title("🔍 專家級全方位個股深度分析")
-    st.markdown("同步解構：**三大法人籌碼、融資融券、多週期均線防守點（5日/20日/60日/120日）、第一/第二支撐與壓力、基本面財務指標與最新題材消息**。")
+    st.markdown("同步解構：**三大法人籌碼、融資融券、多週期均線防守點、第一/第二支撐與壓力、基本面財務指標與最新題材消息**。")
     
     manual_input = st.text_input("輸入代號（例: 6669, 3711, 2330, NVDA, 7203.T）", value="6669")
     target_symbol = manual_input.strip() if manual_input else "6669"
@@ -347,6 +346,8 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
 
             with col_sr2:
                 st.markdown("### 🛡️ 第一/第二支撐與壓力 ＆ 多週期防守")
+                # 修正後的 HTML 字串，避開 f-string 內部大括號衝突
+                ma_text = f"均線參考：5日線 ${sr['5日線(短線防守)']:,.2f} | 20日線 ${sr['20日線(月線支撐)']:,.2f} \vert{} 60日線 ${sr['60日線(季線防守)']:,.2f}"
                 st.markdown(f"""
                 <div class="support-box">
                     <b>🟢 第一支撐 (近端防守)</b><br><span style="font-size: 20px; color: #34d399; font-weight: bold;">${sr['第一支撐']:,.2f}</span>
@@ -361,7 +362,7 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
                     <b>🔴 第二壓力 (波段極限價)</b><br><span style="font-size: 20px; color: #f43f5e; font-weight: bold;">${sr['第二壓力']:,.2f}</span>
                 </div>
                 <div class="small-note" style="margin-top: 10px;">
-                    📌 均線參考：5日線 ${sr['5日線(短線防守)']:,.2f} | 20日線 ${sr['20日線(月線支撐)']:,.2f} \vert{} 60日線 ${sr['60日線(季線防守)']:,.2f}
+                    📌 {ma_text}
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -512,4 +513,4 @@ elif page == "🏠 個人自選股監控儀表板":
         st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V8.1：完美整合第一/第二支撐與壓力點位。")
+st.caption("33 專業操盤系統 V8.2：完美整合第一/第二支撐與壓力點位。")
