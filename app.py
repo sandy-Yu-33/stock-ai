@@ -83,17 +83,28 @@ ASSET_META = {
     "2454.TW": {"name": "聯發科", "div": "半年度/年配息", "desc": "全球前五大無廠晶圓半導體公司"},
     "2382.TW": {"name": "廣達", "div": "年配息", "desc": "筆電與 AI 伺服器代工大廠"},
     "3231.TW": {"name": "緯創", "div": "年配息", "desc": "AI 伺服器與資訊硬體製造"},
-    "NVDA": {"name": "NVIDIA", "div": "季配息", "desc": "全球 AI 運算與繪圖晶片霸主"},
-    "AAPL": {"name": "Apple", "div": "季配息", "desc": "消費性電子與軟體服務巨頭"},
-    "TSLA": {"name": "Tesla", "div": "不配息", "desc": "電動車與能源儲存創新領導者"},
+    "NVDA": {"name": "輝達 (NVIDIA)", "div": "季配息", "desc": "全球 AI 運算與繪圖晶片霸主"},
+    "AAPL": {"name": "蘋果 (Apple)", "div": "季配息", "desc": "消費性電子與軟體服務巨頭"},
+    "TSLA": {"name": "特斯拉 (Tesla)", "div": "不配息", "desc": "電動車與能源儲存創新領導者"},
     "^TWII": {"name": "台灣加權指數", "div": "不適用", "desc": "台股大盤加權指數基準"},
+    "^SOX": {"name": "費城半導體指數", "div": "不適用", "desc": "全球半導體風向球"},
+    "^IXIC": {"name": "那斯達克指數", "div": "不適用", "desc": "美股科技股指標"},
+    "^GSPC": {"name": "標普500指數", "div": "不適用", "desc": "美股大盤基準"},
 }
 
 TW_SYMBOL_RE = re.compile(r"^\d{4,6}\.(TW|TWO)$", re.I)
 
+# 智慧中文名稱動態解析引擎（自動從 Yahoo Finance 抓取並對應）
+@st.cache_data(ttl=3600, show_spinner=False)
 def display_name(symbol):
-    if symbol in ASSET_META:
-        return ASSET_META[symbol]["name"]
+    clean_sym = symbol.upper().strip()
+    if clean_sym in ASSET_META:
+        return ASSET_META[clean_sym]["name"]
+    # 嘗試不帶後綴或帶不同後綴尋找
+    base_num = clean_sym.split(".")[0]
+    for k, v in ASSET_META.items():
+        if k.startswith(base_num):
+            return v["name"]
     try:
         t = yf.Ticker(symbol)
         info = t.info
@@ -105,8 +116,13 @@ def display_name(symbol):
     return symbol
 
 def get_div_info(symbol):
-    if symbol in ASSET_META:
-        return ASSET_META[symbol]["div"], ASSET_META[symbol]["desc"]
+    clean_sym = symbol.upper().strip()
+    if clean_sym in ASSET_META:
+        return ASSET_META[clean_sym]["div"], ASSET_META[clean_sym]["desc"]
+    base_num = clean_sym.split(".")[0]
+    for k, v in ASSET_META.items():
+        if k.startswith(base_num):
+            return v["div"], v["desc"]
     return "依公司公告為準", "全球上市企業與金融商品"
 
 def is_taiwan(symbol):
@@ -474,7 +490,7 @@ capital = st.sidebar.number_input("交易資金", min_value=0.0, value=300000.0,
 risk_pct = st.sidebar.number_input("單筆最大風險 %", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
 
 st.sidebar.markdown("### 📋 自選股管理")
-st.sidebar.caption("支援直接輸入純數字（例：2330, 5274, 00878）或美股代號。")
+st.sidebar.caption("支援直接輸入純數字（例：2330, 5274, 2603）或美股代號。")
 watch_text = st.sidebar.text_area(
     "輸入自選代號（逗號、空格或換行）",
     value=",".join(DEFAULT_WATCHLIST),
@@ -498,7 +514,7 @@ if page == "📰 每日即時新聞與盤勢":
     st.subheader("🔥 今日財經頭條與市場焦點")
     st.markdown("""
     <div class="news-card">
-        <h4>🚀 台股量能突破兆元站穩 47,000 點大關！電子權值與記憶體族群強勢領軍</h4>
+        <h4>🚀 台股量能突破兆元站穩大關！電子權值與記憶體族群強勢領軍</h4>
         <p class="small-note">發布時間：今日盤勢總結 | 來源：財經通訊</p>
         <p>台股本周延續強勢格局，大盤指數亮眼收高。晶圓代工雙雄台積電（2330）、聯電（2303）帶頭上攻，配合記憶體族群與高價千金股全面引爆，市場成交量再度重回新台幣 1 兆元以上。</p>
     </div>
@@ -531,7 +547,6 @@ elif page == "🕒 台股 13:00 隔日沖雷達":
             c_p = float(df["Close"].iloc[-1])
             p_p = float(df["Close"].iloc[-2])
             chg = ((c_p - p_p) / p_p) * 100
-            vol_ratio = float(df["Volume"].iloc[-1] / df["Volume"].rolling(5).mean().iloc[-1]) if pd.notna(df["Volume"].rolling(5).mean().iloc[-1]) else 1.0
             sr = calculate_support_resistance(df)
             if sr and chg > 1.0:
                 rows.append({
@@ -592,9 +607,41 @@ elif page == "🏠 總覽":
     if not regime_df.empty:
         st.subheader("🌏 全球指數與大盤風向")
         show = regime_df.copy()
+        show["市場"] = show["代碼"].apply(display_name)
         show["20日報酬"] = show["20日報酬"].map(lambda v: f"{v*100:.2f}%" if pd.notna(v) else "—")
         show["收盤"] = show["收盤"].map(lambda v: f"{v:,.2f}")
         st.dataframe(show, use_container_width=True, hide_index=True)
+
+    st.subheader("📊 自選股即時量化快照")
+    rows = []
+    for sym in watchlist:
+        df = get_history(sym, "1y")
+        sc = score_asset(df)
+        div_freq, _ = get_div_info(sym)
+        if df.empty:
+            rows.append({"代碼": sym, "名稱": display_name(sym), "狀態": "無資料"})
+            continue
+        x = add_indicators(df)
+        r = x.iloc[-1]
+        rows.append({
+            "代碼": sym,
+            "名稱": display_name(sym),
+            "配息機制": div_freq,
+            "收盤價": r["Close"],
+            "日漲跌幅": r["Return1D"],
+            "RSI": r["RSI14"],
+            "量比": r["VolRatio"],
+            "量化得分": sc["score"],
+            "技術訊號": sc["signal"],
+        })
+    snap = pd.DataFrame(rows)
+    if not snap.empty:
+        for col in ["收盤價", "RSI", "量比", "量化得分"]:
+            if col in snap.columns:
+                snap[col] = snap[col].round(2)
+        if "日漲跌幅" in snap.columns:
+            snap["日漲跌幅"] = snap["日漲跌幅"].map(lambda v: f"{v*100:+.2f}%" if pd.notna(v) else "—")
+        st.dataframe(snap, use_container_width=True, hide_index=True)
 
 # -----------------------------
 # Page: AI Quant Scanner
@@ -631,7 +678,7 @@ elif page == "🔍 個股深度分析 (支撐壓力/買賣點)":
 
     df = get_history(target_symbol, "2y")
     if df.empty:
-        st.error(f"無法取得代號 `{target_symbol}` 的資料，請確認代號是否正確（台股上市櫃可直接輸入數字如 2330 或 5274）。")
+        st.error(f"無法取得代號 `{target_symbol}` 的資料，請確認代號是否正確。")
     else:
         x = add_indicators(df)
         r = x.iloc[-1]
@@ -721,4 +768,4 @@ elif page == "📒 交易日誌":
     st.file_uploader("上傳 CSV", type=["csv"])
 
 st.divider()
-st.caption("33 專業操盤系統 V3.0：支援全台股智慧容錯萬用查詢、支撐壓力與短線當沖。")
+st.caption("33 專業操盤系統 V3.0：全面支援全球股票智慧中文名稱解析與精準操盤。")
