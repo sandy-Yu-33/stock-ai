@@ -17,7 +17,7 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V4.1 穩定旗艦版",
+    page_title="33 專業操盤系統 V4.5 全市場旗艦版",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -70,16 +70,16 @@ DEFAULT_WATCHLIST = [
 ]
 
 # -------------------------------------------------------------
-# 🌐 全球資產中文與屬性資料庫 (全面收錄台股上市櫃、ETF、美股、期貨、指數)
+# 🌐 全球與全台股（上市、上櫃、興櫃、創新板、ETF、期貨）資料庫
 # -------------------------------------------------------------
 GLOBAL_ASSET_DATABASE = {
-    # 台股上市權值與熱門個股 (.TW)
+    # 台股上市權值與熱門個股
     "2330.TW": {"name": "台積電", "div": "季配息", "market": "台股上市", "desc": "全球晶圓代工龍頭"},
     "3711.TW": {"name": "日月光投控", "div": "年配息", "market": "台股上市", "desc": "全球半導體封測龍頭"},
     "2317.TW": {"name": "鴻海", "div": "年配息", "market": "台股上市", "desc": "全球電子代工巨頭與AI伺服器"},
     "2454.TW": {"name": "聯發科", "div": "半年度配息", "market": "台股上市", "desc": "全球前五大IC設計大廠"},
     "2303.TW": {"name": "聯電", "div": "年配息", "market": "台股上市", "desc": "成熟製程晶圓代工大廠"},
-    "2308.TW": {"name": "台達電", "div": "年配息", "market": "台股上市", "desc": "電源管理與電動車/AI零組件"},
+    "2308.TW": {"name": "台達電", "div": "年配息", "market": "台股上市", "desc": "電源管理與電動車零組件"},
     "2382.TW": {"name": "廣達", "div": "年配息", "market": "台股上市", "desc": "筆電代工與AI伺服器大廠"},
     "3017.TW": {"name": "奇鋐", "div": "年配息", "market": "台股上市", "desc": "AI 伺服器散熱模組大廠"},
     "3008.TW": {"name": "大立光", "div": "半年配", "market": "台股上市", "desc": "全球手機鏡頭光學霸主"},
@@ -89,15 +89,10 @@ GLOBAL_ASSET_DATABASE = {
     "2881.TW": {"name": "富邦金", "div": "年配息", "market": "台股金融", "desc": "台灣民營金控龍頭"},
     "2882.TW": {"name": "國泰金", "div": "年配息", "market": "台股金融", "desc": "大型綜合金控集團"},
     "2891.TW": {"name": "中信金", "div": "年配息", "market": "台股金融", "desc": "民營銀行與金融服務"},
-    "2884.TW": {"name": "玉山金", "div": "年配息", "market": "台股金融", "desc": "優質數位金融金控"},
     "2002.TW": {"name": "中鋼", "div": "年配息", "market": "台股傳產", "desc": "台灣鋼鐵龍頭企業"},
-    "1301.TW": {"name": "台塑", "div": "年配息", "market": "台股傳產", "desc": "台塑集團塑膠化工龍頭"},
-    "1303.TW": {"name": "南亞", "div": "年配息", "market": "台股傳產", "desc": "塑膠加工與電子材料"},
-    "3037.TW": {"name": "欣興", "div": "年配息", "market": "台股上市", "desc": "載板與印刷電路板大廠"},
     "6669.TW": {"name": "緯穎", "div": "年配息", "market": "台股上市", "desc": "雲端資料中心與AI伺服器"},
-    "6446.TW": {"name": "藥華藥", "div": "不配息", "market": "台股生技", "desc": "新藥研發與生技權值股"},
     
-    # 台股上櫃高價與熱門個股 (.TWO)
+    # 台股上櫃與創新板
     "5274.TWO": {"name": "信驊", "div": "年配息", "market": "台股上櫃", "desc": "全球伺服器遠端管理晶片(BMC)王"},
     "3661.TWO": {"name": "世芯-KY", "div": "年配息", "market": "台股上櫃", "desc": "AI ASIC 設計服務龍頭"},
     "3529.TWO": {"name": "力旺", "div": "年配息", "market": "台股上櫃", "desc": "半導體矽智財(IP)大廠"},
@@ -111,43 +106,25 @@ GLOBAL_ASSET_DATABASE = {
     "00940.TW": {"name": "元大臺灣價值高息", "div": "月配息", "market": "台股ETF", "desc": "巴菲特價值投資哲學"},
     "006208.TW": {"name": "富邦台50", "div": "半年配", "market": "台股ETF", "desc": "低內扣台50追蹤標的"},
     "00713.TW": {"name": "元大台灣高息低波", "div": "季配息", "market": "台股ETF", "desc": "高股息兼顧低波動"},
-    "00881.TW": {"name": "國泰台灣5G+", "div": "半年配", "market": "台股ETF", "desc": "聚焦台灣5G與半導體供應鏈"},
-    "00922.TW": {"name": "國泰台灣領袖50", "div": "年配息", "market": "台股ETF", "desc": "低碳轉型領袖50大"},
-    "00935.TW": {"name": "野村台灣新科技50", "div": "年配息", "market": "台股ETF", "desc": "創新科技主題ETF"},
 
     # 美國科技巨頭與熱門 ETF
     "NVDA": {"name": "輝達 (NVIDIA)", "div": "季配息", "market": "美股", "desc": "全球 AI 運算晶片霸主"},
     "AAPL": {"name": "蘋果 (Apple)", "div": "季配息", "market": "美股", "desc": "消費電子與軟體服務"},
     "TSLA": {"name": "特斯拉 (Tesla)", "div": "不配息", "market": "美股", "desc": "電動車與能源儲存領導者"},
     "MSFT": {"name": "微軟 (Microsoft)", "div": "季配息", "market": "美股", "desc": "雲端運算與AI軟體巨頭"},
-    "GOOGL": {"name": "谷歌 (Alphabet)", "div": "不配息", "market": "美股", "desc": "全球搜尋引擎與AI創新"},
-    "AMZN": {"name": "亞馬遜 (Amazon)", "div": "不配息", "market": "美股", "desc": "電商與AWS雲端服務龍頭"},
-    "META": {"name": "Meta Platforms", "div": "季配息", "market": "美股", "desc": "社群媒體與元宇宙"},
     "QQQ": {"name": "那斯達克100 ETF", "div": "季配息", "market": "美股ETF", "desc": "追蹤美股百大科技創新企業"},
     "SPY": {"name": "標普500 ETF", "div": "季配息", "market": "美股ETF", "desc": "追蹤美國前500大頂尖企業"},
     "SOXL": {"name": "半導體三倍做多", "div": "不配息", "market": "美股槓桿ETF", "desc": "費城半導體三倍槓桿"},
 
-    # 國際期貨與全球重要指數
+    # 國際期貨與指數
     "GC=F": {"name": "黃金期貨", "div": "不適用", "market": "國際期貨", "desc": "全球避險與貴金屬指標"},
     "CL=F": {"name": "紐約原油期貨", "div": "不適用", "market": "國際期貨", "desc": "WTI 輕原油期貨"},
-    "SI=F": {"name": "白銀期貨", "div": "不適用", "market": "國際期貨", "desc": "工業與貴金屬白銀"},
     "^TWII": {"name": "台灣加權指數", "div": "不適用", "market": "全球指數", "desc": "台股大盤加權指數基準"},
     "^SOX": {"name": "費城半導體指數", "div": "不適用", "market": "全球指數", "desc": "全球半導體風向球"},
-    "^IXIC": {"name": "那斯達克綜合指數", "div": "不適用", "market": "全球指數", "desc": "美股科技指數"},
-    "^GSPC": {"name": "標普500指數", "div": "不適用", "market": "全球指數", "desc": "美股標普大盤"},
-    "^DJI": {"name": "道瓊工業指數", "div": "不適用", "market": "全球指數", "desc": "美股傳統藍籌股指數"},
-    "^N225": {"name": "日經225指數", "div": "不適用", "market": "全球指數", "desc": "日本東京日經大盤"},
-    "^KS11": {"name": "韓國綜合指數", "div": "不適用", "market": "全球指數", "desc": "韓國KOSPI大盤"},
-
-    # 日韓重點權值
-    "7203.T": {"name": "豐田汽車 (Toyota)", "div": "半年配", "market": "日股", "desc": "全球汽車銷量龍頭"},
-    "6758.T": {"name": "索尼集團 (Sony)", "div": "半年配", "market": "日股", "desc": "娛樂與感測元件"},
-    "005930.KS": {"name": "三星電子 (Samsung)", "div": "季配息", "market": "韓股", "desc": "記憶體與手機霸主"},
-    "000660.KS": {"name": "SK海力士", "div": "年配息", "market": "韓股", "desc": "HBM AI 記憶體領導者"},
 }
 
 # -------------------------------------------------------------
-# 智慧代號正規化與中文動態解析 (強化上市櫃判斷)
+# 🌐 萬用全市場智慧代號正規化與動態抓取引擎
 # -------------------------------------------------------------
 def normalize_symbol(s):
     s = str(s).strip().upper()
@@ -155,17 +132,17 @@ def normalize_symbol(s):
         return ""
     if s in GLOBAL_ASSET_DATABASE:
         return s
-    # 針對 3711 等上市個股強制對應
+    # 強制對應已知代號
     if s == "3711":
         return "3711.TW"
-    # 純數字自動判斷上市 (.TW) 或上櫃 (.TWO)
+    # 台股上市櫃、興櫃、創新板多碼數通用正規化
     if s.isdigit():
         if len(s) == 4:
-            if s.startswith(("5", "4", "3", "6")):
+            if s.startswith(("5", "4", "3", "6", "8")):
                 return s + ".TWO"
             else:
                 return s + ".TW"
-        elif len(s) == 5:
+        elif len(s) >= 5:
             return s + ".TW"
     if s.isdigit() and len(s) == 4 and not s.startswith("2"):
         return s + ".T"
@@ -179,6 +156,7 @@ def display_name(symbol):
     for k, v in GLOBAL_ASSET_DATABASE.items():
         if k.startswith(base):
             return v["name"]
+    # 動態聯網抓取 Yahoo Finance 官方中文名稱
     try:
         t = yf.Ticker(symbol)
         info = t.info
@@ -197,25 +175,34 @@ def get_asset_meta(symbol):
     for k, v in GLOBAL_ASSET_DATABASE.items():
         if k.startswith(base):
             return v["div"], v["desc"], v["market"]
-    return "依公告為準", "全球金融資產", "跨國市場"
+    return "依公告為準", "全市場上市櫃興櫃創新板資產", "台美跨國市場"
 
 # -------------------------------------------------------------
-# 資料下載與強固型容錯機制 (支援多候選字串嘗試)
+# 全市場萬用強固型資料下載引擎（自動嘗試所有可能後綴）
 # -------------------------------------------------------------
 @st.cache_data(ttl=300, show_spinner=False)
 def get_history(symbol, period="1y", interval="1d"):
-    sym = normalize_symbol(symbol)
-    candidates = [sym]
-    if sym.isdigit():
-        candidates = [sym + ".TW", sym + ".TWO", sym + ".T"]
-    elif ".TW" in sym:
-        candidates = [sym, sym.replace(".TW", ".TWO")]
-    elif ".TWO" in sym:
-        candidates = [sym, sym.replace(".TWO", ".TW")]
-    elif sym == "3711.TW":
-        candidates = ["3711.TW", "3711.TWO", "3711"]
+    raw_s = str(symbol).strip().upper()
+    sym = normalize_symbol(raw_s)
+    
+    # 建立強大的候選查詢清單（涵蓋上市 .TW、上櫃 .TWO、興櫃、創新板及原代號）
+    candidates = [sym, raw_s]
+    if raw_s.isdigit():
+        candidates = [raw_s + ".TW", raw_s + ".TWO", raw_s, raw_s + ".EX", raw_s + ".RO"]
+    elif ".TW" in raw_s:
+        candidates = [raw_s, raw_s.replace(".TW", ".TWO"), raw_s.replace(".TW", "")]
+    elif ".TWO" in raw_s:
+        candidates = [raw_s, raw_s.replace(".TWO", ".TW"), raw_s.replace(".TWO", "")]
 
-    for s in candidates:
+    # 濾除重複
+    seen = set()
+    unique_candidates = []
+    for c in candidates:
+        if c not in seen:
+            seen.add(c)
+            unique_candidates.append(c)
+
+    for s in unique_candidates:
         try:
             df = yf.download(s, period=period, interval=interval, auto_adjust=False, progress=False, threads=False)
             if df is not None and not df.empty:
@@ -295,15 +282,15 @@ def calculate_support_resistance(df):
 # -------------------------------------------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V4.1")
+st.sidebar.title("⚙️ 33 專業操盤系統 V4.5")
 page = st.sidebar.radio(
     "功能模組",
     [
         "📰 今日財經早報與全球大小事",
         "🕒 13:00 台股隔日沖雷達",
         "⏰ 04:00 美股當日當沖雷達",
-        "🌏 全球股票與期貨總覽庫",
-        "🔍 個股深度分析 (精準支撐壓力/買賣點)",
+        "🌏 全市場股票與期貨總覽庫",
+        "🔍 全市場個股深度分析 (精準支撐壓力)",
         "🏠 自選股監控儀表板",
     ],
 )
@@ -312,8 +299,9 @@ st.sidebar.divider()
 capital = st.sidebar.number_input("操盤資金水位", min_value=0.0, value=500000.0, step=50000.0)
 
 st.sidebar.markdown("### 📋 自選股清單")
+st.sidebar.caption("支援上市、上櫃、興櫃、創新板、美股、期貨等任意代號。")
 watch_text = st.sidebar.text_area(
-    "輸入代號 (支援全球台美日韓期貨ETF)",
+    "輸入代號 (逗號、空格或換行)",
     value=",".join(DEFAULT_WATCHLIST),
     height=100
 )
@@ -324,20 +312,16 @@ watchlist = [normalize_symbol(s) for s in re.split(r"[,\n\s]+", watch_text) if s
 # -----------------------------
 if page == "📰 今日財經早報與全球大小事":
     st.title("📰 專業操盤手今日財經早報")
-    st.markdown(f"**發布日期**：`{datetime.now().strftime('%Y-%m-%d')}` | 掌握全球股市、期貨與匯市關鍵脈動。")
+    st.markdown(f"**發布日期**：`{datetime.now().strftime('%Y-%m-%d')}` | 掌握上市、上櫃、興櫃與創新板全市場動態。")
 
     st.markdown("""
     <div class="report-card">
-        <h3>🇺🇸 美股要聞：科技股與 AI 供應鏈動能延續，期貨市場高檔震盪</h3>
-        <p>美國聯準會貨幣政策預期底定，大型科技巨頭（輝達、微軟、蘋果）基本面依舊強健。黃金期貨（GC=F）與原油期貨（CL=F）受地緣政治與通膨數據牽動，短線波動加劇，操盤手宜嚴控風險。</p>
+        <h3>🇹🇼 台股全市場總覽：上市、上櫃、興櫃與創新板全面活躍</h3>
+        <p>台股權值股與高價千金股帶動指數高檔震盪。隨著櫃買市場與興櫃、創新板生技與科技新創企業的資金輪動加快，13:00 收盤前的隔日沖與尾盤鎖碼機會持續湧現。</p>
     </div>
     <div class="report-card">
-        <h3>🇹🇼 台股要聞：權值股與高股息 ETF 帶動量能回溫，13:00 隔日沖熱絡</h3>
-        <p>台積電（2330.TW）與日月光投控（3711.TW）等半導體封測權值股支撐大盤多方格局。中小型股在尾盤常出現強勢鎖碼，適合透過 13:00 隔日沖雷達捕捉開高契機。</p>
-    </div>
-    <div class="report-card">
-        <h3>🌏 亞洲市場：日韓半導體與車市表現亮眼</h3>
-        <p>日本豐田汽車與南韓三星、海力士受惠於全球車用晶片與 HBM 記憶體強勁需求，外資持續高度關注亞洲科技供應鏈。</p>
+        <h3>🇺🇸 美國市場與國際期貨：AI 供應鏈與避險資產連動</h3>
+        <p>美股科技巨頭與黃金、原油期貨保持高聯動性。清晨 04:00 美股收盤後產生的當沖雷達標的，為短線操盤手提供絕佳的獲利契機。</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -346,7 +330,7 @@ if page == "📰 今日財經早報與全球大小事":
 # -----------------------------
 elif page == "🕒 13:00 台股隔日沖雷達":
     st.title("🕒 13:00 台股收盤前隔日沖強勢股雷達")
-    st.markdown("自動掃描台股權值與強勢上櫃股，挑選尾盤帶量鎖碼、具備高隔日開高勝率之標的。")
+    st.markdown("自動掃描台股上市櫃與熱門強勢股，挑選尾盤帶量鎖碼、具備高隔日開高勝率之標的。")
 
     tw_pool = ["2330.TW", "3711.TW", "5274.TWO", "6669.TW", "2454.TW", "2317.TW", "2603.TW", "3017.TW", "3008.TW"]
     rows = []
@@ -416,15 +400,15 @@ elif page == "⏰ 04:00 美股當日當沖雷達":
 # -------------------------------------------------------------
 # Page 4: Global Markets Overview
 # -----------------------------
-elif page == "🌏 全球股票與期貨總覽庫":
-    st.title("🌏 內建完整全球股票、ETF、期貨與指數總覽庫")
-    st.markdown("系統已完整納入台股、美股、日韓股、ETF 及國際期貨（黃金、原油），所有標的皆具備中文名稱自動對應。")
+elif page == "🌏 全市場股票與期貨總覽庫":
+    st.title("🌏 全市場股票（上市、上櫃、興櫃、創新板）與期貨總覽")
+    st.markdown("本系統全面支援台股所有板塊及全球資產查詢，您可以直接在左側或深度分析中輸入任何代號查詢。")
 
     categories = {
-        "台股權值與上櫃": ["2330.TW", "3711.TW", "2317.TW", "2454.TW", "5274.TWO", "3661.TWO", "6669.TW", "2603.TW"],
+        "台股上市權值與熱門": ["2330.TW", "3711.TW", "2317.TW", "2454.TW", "2303.TW", "2382.TW", "2603.TW"],
+        "台股上櫃與創新板": ["5274.TWO", "3661.TWO", "3529.TWO"],
         "台股熱門 ETF": ["0050.TW", "0056.TW", "00878.TW", "00919.TW", "00929.TW", "00940.TW"],
-        "美股科技巨頭與 ETF": ["NVDA", "AAPL", "TSLA", "MSFT", "GOOGL", "QQQ", "SPY", "SOXL"],
-        "國際期貨與指數": ["GC=F", "CL=F", "SI=F", "^TWII", "^SOX", "^N225", "^KS11"],
+        "美股科技與期貨": ["NVDA", "AAPL", "TSLA", "QQQ", "GC=F", "CL=F"],
     }
 
     selected_cat = st.selectbox("選擇資產類別快速檢視", list(categories.keys()))
@@ -437,24 +421,26 @@ elif page == "🌏 全球股票與期貨總覽庫":
         rows.append({
             "代碼": sym,
             "中文名稱": display_name(sym),
-            "市場分類": mkt,
+            "市場板塊": mkt,
             "最新收盤價": f"${close_p:,.2f}" if close_p > 0 else "—",
             "股利政策": div,
-            "資產屬性描述": desc,
+            "屬性描述": desc,
         })
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 # -------------------------------------------------------------
 # Page 5: Deep Analysis
 # -----------------------------
-elif page == "🔍 個股深度分析 (精準支撐壓力/買賣點)":
-    st.title("🔍 全球資產深度分析與精準操盤點位")
-    manual_input = st.text_input("輸入任意代號（例: 3711, 2330, 5274, NVDA, GC=F, ^TWII）", value="3711.TW")
-    target_symbol = normalize_symbol(manual_input) if manual_input else "3711.TW"
+elif page == "🔍 全市場個股深度分析 (精準支撐壓力)":
+    st.title("🔍 全市場個股深度分析與精準操盤點位")
+    st.markdown("支援**上市、上櫃、興櫃、創新板**、美股、期貨等任意代號查詢（直接輸入代號即可，系統會自動解碼）。")
+    
+    manual_input = st.text_input("輸入任意台美日韓期貨代號（例: 3711, 2330, 5274, 6901, NVDA, GC=F）", value="3711.TW")
+    target_symbol = manual_input.strip() if manual_input else "3711.TW"
 
     df = get_history(target_symbol, "2y")
     if df.empty:
-        st.error(f"無法取得代號 `{target_symbol}` 的資料，請確認代號正確。")
+        st.error(f"無法取得代號 `{target_symbol}` 的資料。請確認代號正確，上市櫃興櫃創新板皆可直接輸入代號查詢。")
     else:
         x = add_indicators(df)
         r = x.iloc[-1]
@@ -517,7 +503,7 @@ elif page == "🔍 個股深度分析 (精準支撐壓力/買賣點)":
 # -----------------------------
 elif page == "🏠 自選股監控儀表板":
     st.title("🏠 個人自選股即時監控儀表板")
-    st.markdown("即時追蹤您在左側欄位輸入的所有全球資產報價與技術狀態。")
+    st.markdown("即時追蹤您在左側欄位輸入的所有全球與全台上市櫃興櫃資產報價。")
 
     rows = []
     for sym in watchlist:
@@ -531,7 +517,7 @@ elif page == "🏠 自選股監控儀表板":
         rows.append({
             "代碼": sym,
             "中文名稱": display_name(sym),
-            "市場分類": mkt,
+            "市場板塊": mkt,
             "最新收盤價": round(float(r["Close"]), 2),
             "日漲跌幅": chg,
             "股利政策": div,
@@ -542,4 +528,4 @@ elif page == "🏠 自選股監控儀表板":
         st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V4.1 穩定旗艦版：完美支援 3711 日月光投控等全市場台美日韓期貨資產。")
+st.caption("33 專業操盤系統 V4.5 全市場旗艦版：全面解鎖上市、上櫃、興櫃、創新板與全球期貨ETF。")
