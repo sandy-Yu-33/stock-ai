@@ -18,8 +18,8 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V15.0 企業全貌與全球題材版",
-    page_icon="🌍",
+    page_title="33 專業操盤系統 V16.0 智慧代號辨識版",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -66,21 +66,22 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 DEFAULT_WATCHLIST = [
-    "2330", "3711", "6669", "5274", "2317", "2454", "NVDA", "AAPL", "TSLA", "7203.T", "005930.KS"
+    "2330", "1605", "3711", "6669", "5274", "2317", "2454", "NVDA", "AAPL", "TSLA", "7203.T", "005930.KS"
 ]
 
 GLOBAL_ASSET_DATABASE = {
-    "2330.TW": {"name": "台積電", "market": "台股上市", "desc": "全球晶圓代工龍頭，以先進製程（3奈米、2奈米）與CoWoS先進封裝技術獨步全球，掌握全球AI與HPC晶片命脈。", "pe": "22.5", "roe": "28.5%", "eps": "39.2元"},
-    "3711.TW": {"name": "日月光投控", "market": "台股上市", "desc": "全球半導體封測（OSAT）龍頭，提供晶片封裝、測試及材料服務，受惠於異質整合與先進封裝外包商機。", "pe": "16.8", "roe": "15.2%", "eps": "8.4元"},
-    "6669.TW": {"name": "緯穎", "market": "台股上市", "desc": "專注於雲端資料中心 IT 基礎架構與超大型雲端服務商（CSP）的 AI 伺服器主機板與機櫃解決方案供應商。", "pe": "24.1", "roe": "35.8%", "eps": "85.4元"},
-    "2317.TW": {"name": "鴻海", "market": "台股上市", "desc": "全球最大電子代工製造服務（EMS）企業，近年積極佈局 AI 伺服器、電動車（EV）及半導體三大核心領域。", "pe": "14.2", "roe": "11.5%", "eps": "10.2元"},
-    "2454.TW": {"name": "聯發科", "market": "台股上市", "desc": "全球前五大無晶圓廠IC設計大廠，產品涵蓋智慧型手機晶片、智慧家庭與車用/ASIC客製化晶片。", "pe": "18.5", "roe": "26.4%", "eps": "58.1元"},
-    "5274.TWO": {"name": "信驊", "market": "台股上櫃", "desc": "全球伺服器遠端管理晶片（BMC）絕對王者，市佔率超過七成，深度綁定全球各大雲端資料中心伺服器擴建潮。", "pe": "45.2", "roe": "32.1%", "eps": "52.3元"},
-    "NVDA": {"name": "輝達 (NVIDIA)", "market": "美股", "desc": "全球AI運算、繪圖晶片（GPU）與高效能運算（HPC）霸主，建立無人能敵的 CUDA 軟硬體 AI 生態系。", "pe": "48.5", "roe": "75.2%", "eps": "3.20美元"},
-    "AAPL": {"name": "蘋果 (Apple)", "market": "美股", "desc": "消費性電子與軟體服務生態系巨頭，涵蓋iPhone、Mac及高毛利的App Store與iCloud等訂閱服務。", "pe": "31.2", "roe": "145.0%", "eps": "6.50美元"},
-    "TSLA": {"name": "特斯拉 (Tesla)", "market": "美股", "desc": "全球電動車與能源儲存（Megapack）領導者，並積極推進全自動駕駛（FSD）與人形機器人技術。", "pe": "65.4", "roe": "18.2%", "eps": "2.40美元"},
-    "7203.T": {"name": "豐田汽車 (Toyota)", "market": "日股", "desc": "全球銷量第一的傳統汽車製造商，近年在油電混合車（HEV）與次世代固態電池研發上具備領先優勢。", "pe": "10.5", "roe": "14.2%", "eps": "280日圓"},
-    "005930.KS": {"name": "三星電子 (Samsung)", "market": "韓股", "desc": "全球記憶體（DRAM/NAND）與智慧型手機雙料霸主，同時擁有晶圓代工與面板顯示器完整垂直整合能力。", "pe": "15.4", "roe": "12.8%", "eps": "5200韓元"},
+    "2330.TW": {"name": "台積電", "market": "台股上市", "desc": "全球晶圓代工龍頭，以先進製程（3奈米、2奈米）與CoWoS先進封裝技術獨步全球，掌握全球AI與HPC晶片命脈。"},
+    "1605.TW": {"name": "華新", "market": "台股上市", "desc": "台灣電線電纜與不銹鋼大廠，近年積極轉型佈局新能源、綠能與海纜等精密製造領域。"},
+    "3711.TW": {"name": "日月光投控", "market": "台股上市", "desc": "全球半導體封測（OSAT）龍頭，提供晶片封裝、測試及材料服務，受惠於異質整合與先進封裝外包商機。"},
+    "6669.TW": {"name": "緯穎", "market": "台股上市", "desc": "專注於雲端資料中心 IT 基礎架構與超大型雲端服務商（CSP）的 AI 伺服器主機板與機櫃解決方案供應商。"},
+    "2317.TW": {"name": "鴻海", "market": "台股上市", "desc": "全球最大電子代工製造服務（EMS）企業，近年積極佈局 AI 伺服器、電動車（EV）及半導體三大核心領域。"},
+    "2454.TW": {"name": "聯發科", "market": "台股上市", "desc": "全球前五大無晶圓廠IC設計大廠，產品涵蓋智慧型手機晶片、智慧家庭與車用/ASIC客製化晶片。"},
+    "5274.TWO": {"name": "信驊", "market": "台股上櫃", "desc": "全球伺服器遠端管理晶片（BMC）絕對王者，市佔率超過七成，深度綁定全球各大雲端資料中心伺服器擴建潮。"},
+    "NVDA": {"name": "輝達 (NVIDIA)", "market": "美股", "desc": "全球AI運算、繪圖晶片（GPU）與高效能運算（HPC）霸主，建立無人能敵的 CUDA 軟硬體 AI 生態系。"},
+    "AAPL": {"name": "蘋果 (Apple)", "market": "美股", "desc": "消費性電子與軟體服務生態系巨頭，涵蓋iPhone、Mac及高毛利的App Store與iCloud等訂閱服務。"},
+    "TSLA": {"name": "特斯拉 (Tesla)", "market": "美股", "desc": "全球電動車與能源儲存（Megapack）領導者，並積極推進全自動駕駛（FSD）與人形機器人技術。"},
+    "7203.T": {"name": "豐田汽車 (Toyota)", "market": "日股", "desc": "全球銷量第一的傳統汽車製造商，近年在油電混合車（HEV）與次世代固態電池研發上具備領先優勢。"},
+    "005930.KS": {"name": "三星電子 (Samsung)", "market": "韓股", "desc": "全球記憶體（DRAM/NAND）與智慧型手機雙料霸主，同時擁有晶圓代工與面板顯示器完整垂直整合能力。"},
 }
 
 def normalize_symbol(s):
@@ -102,29 +103,37 @@ def normalize_symbol(s):
             return s + ".TW"
     return s
 
-def display_name(symbol):
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_stock_display_name(symbol):
     sym = normalize_symbol(symbol)
     if sym in GLOBAL_ASSET_DATABASE:
         return GLOBAL_ASSET_DATABASE[sym]["name"]
-    base = sym.split(".")[0]
-    for k, v in GLOBAL_ASSET_DATABASE.items():
-        if k.startswith(base):
-            return v["name"]
+    
+    # 嘗試透過 yfinance 取得真實公司名稱
     try:
-        t = yf.Ticker(symbol)
+        t = yf.Ticker(sym)
         info = t.info
         name = info.get("chineseName") or info.get("longName") or info.get("shortName")
         if name:
             return name
     except Exception:
         pass
-    return f"{symbol} (資產)"
+    
+    # 若為台股數字，提供基本備援
+    base_code = sym.split(".")[0]
+    return f"台股代號 {base_code}"
+
+def display_name(symbol):
+    return fetch_stock_display_name(symbol)
 
 def get_asset_desc(symbol):
     sym = normalize_symbol(symbol)
     if sym in GLOBAL_ASSET_DATABASE:
         return GLOBAL_ASSET_DATABASE[sym]["desc"]
-    return "全球金融資產與供應鏈指標，具備特定產業競爭優勢與市場需求支撐。"
+    
+    # 動態產生預設專業描述
+    name = display_name(symbol)
+    return f"{name}（{symbol}）：經市場驗證之重要交易標的，具備特定產業供應鏈地位與市場流動性。"
 
 @st.cache_data(ttl=900, show_spinner=False)
 def get_twse_daily_fundamental(symbol):
@@ -340,7 +349,7 @@ def calculate_support_resistance_and_rr(df):
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V15.0")
+st.sidebar.title("⚙️ 33 專業操盤系統 V16.0")
 page = st.sidebar.radio(
     "功能模組",
     [
@@ -370,8 +379,8 @@ if page == "🔍 個股全方位深度解析 (企業業務+法人籌碼+支撐�
     st.title("🔍 專家級個股全方位深度解析")
     st.markdown("老手箴言：**買股票前先搞懂它是做什麼的、法人買不買單、以及 RR 值安不安全**。")
     
-    manual_input = st.text_input("輸入代號（例: 2330, 6669, NVDA, 7203.T）", value="2330")
-    target_symbol = manual_input.strip() if manual_input else "2330"
+    manual_input = st.text_input("輸入代號（例: 2330, 1605, 6669, NVDA）", value="1605")
+    target_symbol = manual_input.strip() if manual_input else "1605"
 
     df = get_history(target_symbol, "1y")
     if df.empty:
@@ -464,7 +473,7 @@ if page == "🔍 個股全方位深度解析 (企業業務+法人籌碼+支撐�
 elif page == "🕒 台股 13:00 隔日沖高勝率雷達":
     st.title("🕒 13:00 台股收盤前隔日沖高勝率雷達")
     st.markdown("鎖定台股權值與強勢飆股，結合尾盤量比與技術突破，快速挑選隔日具備爆發力的候選股。")
-    tw_pool = ["2330", "3711", "6669", "5274", "2454", "2317"]
+    tw_pool = ["2330", "1605", "3711", "6669", "5274", "2454", "2317"]
     rows = []
     for sym in tw_pool:
         df = get_history(sym, "6mo")
@@ -564,4 +573,4 @@ elif page == "📊 自選股風險報酬監控儀表板":
         st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V15.0：企業核心業務解析、法人籌碼、多週期支撐壓力與各國財經新聞題材全面整合。")
+st.caption("33 專業操盤系統 V16.0：智慧代號辨識、企業核心業務解析、法人籌碼與各國財經新聞題材全面升級。")
