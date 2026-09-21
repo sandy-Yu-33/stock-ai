@@ -17,7 +17,7 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V8.5 最終修復版",
+    page_title="33 專業操盤系統 V8.6 最終防錯版",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -257,7 +257,7 @@ def get_market_catalyst(symbol):
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V8.5")
+st.sidebar.title("⚙️ 33 專業操盤系統 V8.6")
 page = st.sidebar.radio(
     "功能模組",
     [
@@ -346,10 +346,8 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
 
             with col_sr2:
                 st.markdown("### 🛡️ 第一/第二支撐與壓力 ＆ 多週期防守")
-                ma5_val = sr['5日線']
-                ma20_val = sr['20日線']
-                ma60_val = sr['60日線']
-                ma_summary = f"均線參考：5日線 ${ma5_val:,.2f} | 20日線 ${ma20_val:,.2f} \vert{} 60日線 ${ma60_val:,.2f}"
+                # 使用最安全的普通字串相加，完全避開 f-string 解析風險
+                ma_summary = "均線參考：5日線 $" + f"{sr['5日線']:,.2f}" + " | 20日線 $" + f"{sr['20日線']:,.2f}" + " \vert{} 60日線 $" + f"{sr['60日線']:,.2f}"
 
                 st.markdown(f"""
                 <div class="support-box">
@@ -516,4 +514,4 @@ elif page == "🏠 個人自選股監控儀表板":
         st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V8.5 最終修復版：語法已全面正常，支援第一/第二支撐與壓力。")
+st.caption("33 專業操盤系統 V8.6 最終防錯版：完整呈現第一/第二支撐與壓力，運行穩定。")
