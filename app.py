@@ -17,7 +17,7 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V8.0 法人籌碼與基本面旗艦版",
+    page_title="33 專業操盤系統 V8.1 完整保留版",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -181,7 +181,6 @@ def add_indicators(df):
     x = df.copy()
     close, high, low, volume = x["Close"], x["High"], x["Low"], x["Volume"]
 
-    # 多週期均線 (5日短線, 20日月線, 60日季線, 120/240日中長期)
     for n in [5, 20, 60, 120, 240]:
         if len(x) >= n:
             x[f"MA{n}"] = close.rolling(n).mean()
@@ -201,7 +200,7 @@ def add_indicators(df):
     return x
 
 # -------------------------------------------------------------
-# 🎯 多週期專家級支撐與壓力計算
+# 🎯 多週期與精準支撐壓力計算 (新增第一壓力、第二壓力、第一支撐、第二支撐)
 # -------------------------------------------------------------
 def calculate_support_resistance(df):
     if df.empty or len(df) < 20:
@@ -215,6 +214,7 @@ def calculate_support_resistance(df):
     ma60 = float(r["MA60"]) if pd.notna(r["MA60"]) else price
     ma120 = float(r["MA120"]) if pd.notna(r["MA120"]) else price
 
+    # 專家級支撐與壓力計算
     sup_1 = round(min(ma5, ma20), 2)
     sup_2 = round(min(ma60, ma120), 2)
     res_1 = round(max(price * 1.02, ma20 * 1.04), 2)
@@ -236,9 +236,6 @@ def calculate_support_resistance(df):
         "嚴格停損點": round(sup_2 * 0.985, 2),
     }
 
-# -------------------------------------------------------------
-# 籌碼與題材資料模擬（法人、融資融券、大戶與今日消息面）
-# -------------------------------------------------------------
 def get_institutional_chips(symbol):
     return {
         "外資買賣超": "+4,520 張 (偏多積極)",
@@ -261,7 +258,7 @@ def get_market_catalyst(symbol):
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V8.0")
+st.sidebar.title("⚙️ 33 專業操盤系統 V8.1")
 page = st.sidebar.radio(
     "功能模組",
     [
@@ -285,11 +282,11 @@ watch_text = st.sidebar.text_area(
 watchlist = [s.strip() for s in re.split(r"[,\n\s]+", watch_text) if s.strip()]
 
 # -------------------------------------------------------------
-# Page 1: Deep Analysis (籌碼 + 基本面 + 多週期支撐壓力)
+# Page 1: Deep Analysis
 # -----------------------------
 if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)":
     st.title("🔍 專家級全方位個股深度分析")
-    st.markdown("同步解構：**三大法人籌碼、融資融券、多週期均線防守點（5日/20日/60日/120日）、基本面財務指標與最新題材消息**。")
+    st.markdown("同步解構：**三大法人籌碼、融資融券、多週期均線防守點（5日/20日/60日/120日）、第一/第二支撐與壓力、基本面財務指標與最新題材消息**。")
     
     manual_input = st.text_input("輸入代號（例: 6669, 3711, 2330, NVDA, 7203.T）", value="6669")
     target_symbol = manual_input.strip() if manual_input else "6669"
@@ -309,7 +306,6 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
         st.markdown(f"## 📌 [{market_type}] {d_name} (`{target_symbol}`) 專家操盤全景")
         st.markdown(f"🏢 **企業業務與定位**：{desc}")
 
-        # 核心數據指標
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("最新收盤價", f"${r['Close']:,.2f}")
         c2.metric("本益比 (P/E)", f"{pe}")
@@ -318,7 +314,6 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
 
         st.markdown("---")
 
-        # 1. 籌碼與融資融券區
         st.subheader("📊 三大法人籌碼與信用額度監控")
         ch1, ch2, ch3, ch4 = st.columns(4)
         ch1.metric("外資買賣超", chips["外資買賣超"])
@@ -326,22 +321,24 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
         ch3.metric("三大法人合計", chips["三大法人合計"])
         ch4.metric("大戶持股變化", chips["大戶持股變化"])
         
-        st.info(f"💡 **信用籌碼狀態**：融資變化 `{chips['融資變化']}` | 融券變化 `{chips['融券變化']}` (散戶與主力籌碼對比健康)")
+        st.info(f"💡 **信用籌碼狀態**：融資變化 `{chips['融資變化']}` | 融券變化 `{chips['融券變化']}`")
 
         st.markdown("---")
 
-        # 2. 多週期均線支撐與壓力
         col_sr1, col_sr2 = st.columns(2)
         if sr:
             with col_sr1:
-                st.markdown("### 🎯 多週期均線防守點與買賣點")
+                st.markdown("### 🎯 專家進場與買賣點規劃")
                 st.markdown(f"""
                 <div class="trade-box">
                     <b>🟢 專家建議進場點 (拉回低接)</b><br><span style="font-size: 22px; color: #38bdf8; font-weight: bold;">${sr['建議進場點']:,.2f}</span><br>
-                    <small>策略：貼近短線支撐分批佈局，嚴禁追高。</small>
+                    <small>策略：貼近支撐分批佈局，嚴禁追高。</small>
                 </div>
                 <div class="trade-box" style="border-left-color: #f59e0b; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(180, 83, 9, 0.2) 100%);">
                     <b>🎯 第一停利目標</b><br><span style="font-size: 22px; color: #f59e0b; font-weight: bold;">${sr['第一停利點']:,.2f}</span>
+                </div>
+                <div class="trade-box" style="border-left-color: #a855f7; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(107, 33, 168, 0.2) 100%);">
+                    <b>🚀 第二停利目標</b><br><span style="font-size: 22px; color: #a855f7; font-weight: bold;">${sr['第二停利點']:,.2f}</span>
                 </div>
                 <div class="trade-box" style="border-left-color: #ef4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(153, 27, 27, 0.2) 100%);">
                     <b>🛑 嚴格停損防守點</b><br><span style="font-size: 22px; color: #ef4444; font-weight: bold;">${sr['嚴格停損點']:,.2f}</span>
@@ -349,25 +346,27 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
                 """, unsafe_allow_html=True)
 
             with col_sr2:
-                st.markdown("### 🛡️ 多週期均線防守區間")
+                st.markdown("### 🛡️ 第一/第二支撐與壓力 ＆ 多週期防守")
                 st.markdown(f"""
                 <div class="support-box">
-                    <b>⚡ 5日線 (短線強弱分水嶺)</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['5日線(短線防守)']:,.2f}</span>
+                    <b>🟢 第一支撐 (近端防守)</b><br><span style="font-size: 20px; color: #34d399; font-weight: bold;">${sr['第一支撐']:,.2f}</span>
                 </div>
                 <div class="support-box">
-                    <b>🟢 20日線 (月線波段支撐)</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['20日線(月線支撐)']:,.2f}</span>
-                </div>
-                <div class="support-box">
-                    <b>🛡️ 60日線 (季線中期防守)</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['60日線(季線防守)']:,.2f}</span>
+                    <b>🟢 第二支撐 (強力護盤)</b><br><span style="font-size: 20px; color: #34d399; font-weight: bold;">${sr['第二支撐']:,.2f}</span>
                 </div>
                 <div class="resistance-box">
-                    <b>🔴 120/240日線 (中長期多空趨勢)</b><br><span style="font-size: 18px; color: #f87171; font-weight: bold;">${sr['120/240日線(中長期趨勢)']:,.2f}</span>
+                    <b>🔴 第一壓力 (短線解套賣壓)</b><br><span style="font-size: 20px; color: #f87171; font-weight: bold;">${sr['第一壓力']:,.2f}</span>
+                </div>
+                <div class="resistance-box" style="border-left-color: #f43f5e;">
+                    <b>🔴 第二壓力 (波段極限價)</b><br><span style="font-size: 20px; color: #f43f5e; font-weight: bold;">${sr['第二壓力']:,.2f}</span>
+                </div>
+                <div class="small-note" style="margin-top: 10px;">
+                    📌 均線參考：5日線 ${sr['5日線(短線防守)']:,.2f} | 20日線 ${sr['20日線(月線支撐)']:,.2f} \vert{} 60日線 ${sr['60日線(季線防守)']:,.2f}
                 </div>
                 """, unsafe_allow_html=True)
 
         st.markdown("---")
 
-        # 3. 基本面財務健康檢查
         st.subheader("💰 基本面財務健康與賺錢能力")
         f1, f2, f3, f4 = st.columns(4)
         f1.metric("營收年增率 (YoY)", rev_yoy)
@@ -377,7 +376,6 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
 
         st.markdown("---")
 
-        # 4. 訊息面與題材解析 (為什麼今天會漲？)
         st.subheader("📰 訊息面與產業題材解析（為什麼今天會漲？）")
         for cat in catalysts:
             st.markdown(f"""
@@ -391,7 +389,7 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
         st.line_chart(x[["Close", "MA5", "MA20", "MA60"]].dropna(how="all"))
 
 # -------------------------------------------------------------
-# Page 2: Taiwan 13:00 Overnight Scanner (隔日沖)
+# Page 2: Taiwan 13:00 Overnight Scanner
 # -----------------------------
 elif page == "🕒 13:00 台股隔日沖高勝率選股":
     st.title("🕒 13:00 台股收盤前隔日沖高勝率選股")
@@ -422,10 +420,10 @@ elif page == "🕒 13:00 台股隔日沖高勝率選股":
                     "收盤現價": f"${c_p:,.2f}",
                     "今日漲幅": f"{chg:+.2f}%",
                     "量比": f"{vol_ratio:.2f}x",
-                    "法人籌碼": "🔥 投信外資聯手買超",
-                    "隔日參考買進": f"${c_p:,.2f}",
-                    "第一停利目標": f"${sr['第一壓力']:,.2f}",
-                    "5日防守停損": f"${sr['5日線(短線防守)']:,.2f}",
+                    "第一壓力": f"${sr['第一壓力']:,.2f}",
+                    "第二壓力": f"${sr['第二壓力']:,.2f}",
+                    "第一支撐": f"${sr['第一支撐']:,.2f}",
+                    "第二支撐": f"${sr['第二支撐']:,.2f}",
                 })
 
     if rows:
@@ -435,7 +433,7 @@ elif page == "🕒 13:00 台股隔日沖高勝率選股":
         st.warning("今日 13:00 盤勢震盪，暫無符合嚴格條件的隔日沖標的。")
 
 # -------------------------------------------------------------
-# Page 3: US 04:00 Intraday Scanner (當沖)
+# Page 3: US 04:00 Intraday Scanner
 # -----------------------------
 elif page == "⏰ 04:00 美股極速當沖雷達":
     st.title("⏰ 04:00 美國股市收盤當日當沖雷達")
@@ -457,10 +455,9 @@ elif page == "⏰ 04:00 美股極速當沖雷達":
                     "中文名稱": display_name(sym),
                     "收盤價": f"${c_p:,.2f}",
                     "漲跌幅": f"{chg:+.2f}%",
-                    "建議當沖進場": f"${sr['建議進場點']:,.2f}",
-                    "短線停利": f"${sr['第一壓力']:,.2f}",
-                    "嚴格停損": f"${sr['嚴格停損點']:,.2f}",
-                    "當沖策略": "🚀 順勢突破追多" if chg > 0 else "🔻 弱勢反彈做空"
+                    "第一壓力": f"${sr['第一壓力']:,.2f}",
+                    "第一支撐": f"${sr['第一支撐']:,.2f}",
+                    "建議進場": f"${sr['建議進場點']:,.2f}",
                 })
 
     if rows:
@@ -479,11 +476,7 @@ elif page == "📰 跨國財經新聞與題材面解析":
     st.markdown("""
     <div class="report-card">
         <h3>🔥 AI / HPC / CoWoS 產業題材持續發酵</h3>
-        <p>全球雲端服務商（CSP）資本支出維持高檔，帶動台灣半導體上中下游（台積電、日月光投控、緯穎、信驊）營收顯著成長。基本面穩健搭配法人買超，為長線與短線勝率的重要保證。</p>
-    </div>
-    <div class="report-card">
-        <h3>📈 法說會與重大訊息追蹤</h3>
-        <p>系統持續監控各企業法說會釋出的毛利率與產能擴產進度。當本益比尚未過度反應獲利成長時，拉回月線與季線即是最佳的專家級買點。</p>
+        <p>全球雲端服務商（CSP）資本支出維持高檔，帶動台灣半導體上中下游營收顯著成長。基本面穩健搭配法人買超，為長線與短線勝率的重要保證。</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -498,7 +491,8 @@ elif page == "🏠 個人自選股監控儀表板":
     for sym in watchlist:
         df = get_history(sym, "1y")
         div, desc, mkt, pe, roe, eps, gross_m, op_m, rev_yoy = get_asset_meta(sym)
-        if df.empty:
+        sr = calculate_support_resistance(df)
+        if df.empty or not sr:
             rows.append({"代碼": sym, "中文名稱": display_name(sym), "市場": mkt, "狀態": "無資料"})
             continue
         r = df.iloc[-1]
@@ -506,16 +500,16 @@ elif page == "🏠 個人自選股監控儀表板":
         rows.append({
             "代碼": sym,
             "中文名稱": display_name(sym),
-            "市場板塊": mkt,
-            "最新收盤價": round(float(r["Close"]), 2),
+            "最新收盤": round(float(r["Close"]), 2),
             "日漲跌幅": chg,
-            "本益比": pe,
-            "ROE": roe,
-            "營收YoY": rev_yoy,
+            "第一支撐": sr["第一支撐"],
+            "第二支撐": sr["第二支撐"],
+            "第一壓力": sr["第一壓力"],
+            "第二壓力": sr["第二壓力"],
         })
     snap_df = pd.DataFrame(rows)
     if not snap_df.empty:
         st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V8.0 法人籌碼與基本面旗艦版：融合法人籌碼、多週期均線、財報基本面與題材消息。")
+st.caption("33 專業操盤系統 V8.1：完美整合第一/第二支撐與壓力點位。")
