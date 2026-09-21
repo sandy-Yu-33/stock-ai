@@ -17,7 +17,7 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V8.6 最終防錯版",
+    page_title="33 專業操盤系統 V9.0 專業量化交易雷達版",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -177,10 +177,169 @@ def get_history(symbol, period="2y", interval="1d"):
             continue
     return pd.DataFrame()
 
+# -------------------------------------------------------------
+# 全市場掃描引擎
+# -------------------------------------------------------------
+@st.cache_data(ttl=900, show_spinner=False)
+def get_twse_universe():
+    """取得台股上市股票代號；失敗時回傳空清單，不捏造資料。"""
+    if requests is None:
+        return []
+    try:
+        today = datetime.now().strftime("%Y%m%d")
+        url = "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX"
+        params = {"date": today, "type": "ALLBUT0999", "response": "json"}
+        r = requests.get(url, params=params, timeout=10,
+                         headers={"User-Agent": "Mozilla/5.0"})
+        if r.status_code != 200:
+            return []
+        data = r.json()
+        candidates = []
+        for table in data.get("tables", []):
+            fields = table.get("fields", [])
+            rows = table.get("data", [])
+            if not fields or not rows:
+                continue
+            # 優先找「證券代號」欄位
+            code_idx = next((i for i, f in enumerate(fields) if "證券代號" in str(f)), None)
+            if code_idx is None:
+                continue
+            for row in rows:
+                if code_idx < len(row):
+                    s = str(row[code_idx]).strip()
+                    if re.fullmatch(r"\d{4}", s):
+                        candidates.append(s + ".TW")
+        return sorted(set(candidates))
+    except Exception:
+        return []
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def get_tpex_universe():
+    """
+    上櫃市場資料源若無法取得則不硬填。
+    可由使用者在自選股清單補充 .TWO 代號。
+    """
+    return []
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def get_full_market_universe():
+    twse = get_twse_universe()
+    tpex = get_tpex_universe()
+    # 保留核心大型股與使用者 watchlist，即使交易所 API 當天暫時不可用。
+    base = [normalize_symbol(s) for s in DEFAULT_WATCHLIST]
+    return sorted(set(twse + tpex + base))
+
+
+def scan_symbol(symbol):
+    """對單一股票計算量化分數與雙支撐/雙壓力。"""
+    try:
+        df = get_history(symbol, "9mo", "1d")
+        if df.empty or len(df) < 60:
+            return None
+
+        tech = calculate_technical_score(df)
+        over = calculate_overnight_score(df)
+        sr = calculate_support_resistance(df)
+        if not sr:
+            return None
+
+        r = df.iloc[-1]
+        close = float(r["Close"])
+        prev_close = float(df["Close"].iloc[-2])
+        change = (close / prev_close - 1) * 100 if prev_close else 0
+        vol_ratio = float(add_indicators(df).iloc[-1]["VolRatio"])
+
+        # 綜合分數：技術 60% + 隔日沖 40%
+        composite = round(tech["score"] * 0.60 + over["score"] * 0.40, 1)
+
+        # 距離第一壓力/第一支撐，方便做風險報酬比檢查
+        upside = (sr["第一壓力"] / close - 1) * 100
+        downside = (1 - sr["第一支撐"] / close) * 100
+        rr = upside / downside if downside > 0 else 0
+
+        # 嚴格條件：趨勢、量能、風險報酬至少同時成立。
+        strict_pass = (
+            composite >= 72
+            and tech["score"] >= 65
+            and vol_ratio >= 1.05
+            and upside > 0
+            and rr >= 1.2
+        )
+
+        return {
+            "代碼": symbol.replace(".TW", "").replace(".TWO", ""),
+            "中文名稱": display_name(symbol),
+            "收盤": round(close, 2),
+            "漲跌%": round(change, 2),
+            "量比": round(vol_ratio, 2),
+            "技術分數": tech["score"],
+            "隔日沖分數": over["score"],
+            "綜合分數": composite,
+            "第一支撐": sr["第一支撐"],
+            "第二支撐": sr["第二支撐"],
+            "第一壓力": sr["第一壓力"],
+            "第二壓力": sr["第二壓力"],
+            "風險報酬比": round(rr, 2),
+            "隔日沖停損": sr["隔日沖停損參考"],
+            "第一目標": sr["第一停利"],
+            "第二目標": sr["第二停利"],
+            "訊號": "🔥 嚴格入選" if strict_pass else "觀察",
+        }
+    except Exception:
+        return None
+
+
+def run_market_scan(universe, max_scan=120):
+    """
+    為避免一次下載全市場造成資料源限流：
+    先以近期市場活躍度候選，再對最多 max_scan 檔做完整量化。
+    """
+    universe = list(dict.fromkeys(universe))
+    # 第一階段：以近 3 個月資料做輕量排序。
+    candidates = []
+    for sym in universe:
+        try:
+            df = get_history(sym, "3mo", "1d")
+            if df.empty or len(df) < 20:
+                continue
+            x = add_indicators(df)
+            r = x.iloc[-1]
+            close = float(r["Close"])
+            vol = float(r["VolMA20"]) if pd.notna(r["VolMA20"]) else 0
+            if close <= 0 or vol <= 0:
+                continue
+            # 活躍度：成交量 + 絕對波動 + 趨勢位置
+            recent_ret = abs(float(df["Close"].pct_change(5).iloc[-1])) if len(df) >= 6 else 0
+            activity = math.log1p(vol) + recent_ret * 100
+            candidates.append((activity, sym))
+        except Exception:
+            continue
+
+    candidates.sort(reverse=True)
+    selected = [s for _, s in candidates[:max_scan]]
+
+    results = []
+    for sym in selected:
+        item = scan_symbol(sym)
+        if item is not None:
+            results.append(item)
+
+    if not results:
+        return pd.DataFrame()
+
+    out = pd.DataFrame(results)
+    return out.sort_values(
+        ["綜合分數", "風險報酬比", "量比"],
+        ascending=[False, False, False]
+    ).reset_index(drop=True)
+
 def add_indicators(df):
     x = df.copy()
     close, high, low, volume = x["Close"], x["High"], x["Low"], x["Volume"]
 
+    # 多週期均線 (5日短線, 20日月線, 60日季線, 120/240日中長期)
     for n in [5, 20, 60, 120, 240]:
         if len(x) >= n:
             x[f"MA{n}"] = close.rolling(n).mean()
@@ -200,70 +359,266 @@ def add_indicators(df):
     return x
 
 # -------------------------------------------------------------
-# 🎯 多週期與精準支撐壓力計算
+# 🎯 多週期專家級支撐與壓力計算
 # -------------------------------------------------------------
 def calculate_support_resistance(df):
-    if df.empty or len(df) < 20:
+    """
+    專業版多因子支撐/壓力：
+    - Swing High/Low
+    - 前高/前低
+    - MA20/MA60
+    - Pivot
+    - ATR 波動率
+    回傳第一/第二支撐、第一/第二壓力，以及不同交易模式的風控參考。
+    注意：這些是量化計算的「價格參考區」，不是保證成交或預測。
+    """
+    if df.empty or len(df) < 60:
         return None
-    x = add_indicators(df)
+
+    x = add_indicators(df).copy()
     r = x.iloc[-1]
     price = float(r["Close"])
-    
-    ma5 = float(r["MA5"]) if pd.notna(r["MA5"]) else price
-    ma20 = float(r["MA20"]) if pd.notna(r["MA20"]) else price
-    ma60 = float(r["MA60"]) if pd.notna(r["MA60"]) else price
-    ma120 = float(r["MA120"]) if pd.notna(r["MA120"]) else price
+    atr = float(r["ATR14"]) if pd.notna(r["ATR14"]) and r["ATR14"] > 0 else price * 0.02
 
-    sup_1 = round(min(ma5, ma20), 2)
-    sup_2 = round(min(ma60, ma120), 2)
-    res_1 = round(max(price * 1.02, ma20 * 1.04), 2)
-    res_2 = round(res_1 * 1.05, 2)
-    
+    ma5 = float(r["MA5"])
+    ma20 = float(r["MA20"])
+    ma60 = float(r["MA60"])
+    ma120 = float(r["MA120"])
+
+    # 最近 60 根K 的局部高低點；排除最新一根，避免把當日極端值直接當成支撐/壓力。
+    hist = x.iloc[:-1].tail(60)
+    highs = hist["High"].astype(float)
+    lows = hist["Low"].astype(float)
+
+    # Pivot：以最近完整交易日計算
+    prev = x.iloc[-2]
+    pp = (float(prev["High"]) + float(prev["Low"]) + float(prev["Close"])) / 3
+    pivot_s1 = 2 * pp - float(prev["High"])
+    pivot_s2 = pp - (float(prev["High"]) - float(prev["Low"]))
+    pivot_r1 = 2 * pp - float(prev["Low"])
+    pivot_r2 = pp + (float(prev["High"]) - float(prev["Low"]))
+
+    # 候選支撐/壓力：只保留在現價下/上的價位
+    support_candidates = [
+        ma5, ma20, ma60, ma120, pivot_s1, pivot_s2,
+        float(lows.quantile(0.15)), float(lows.min())
+    ]
+    resistance_candidates = [
+        pivot_r1, pivot_r2,
+        float(highs.quantile(0.85)), float(highs.max()),
+        ma20, ma60, ma120
+    ]
+
+    supports = sorted({round(v, 2) for v in support_candidates
+                       if np.isfinite(v) and v < price * 0.995})
+    resistances = sorted({round(v, 2) for v in resistance_candidates
+                          if np.isfinite(v) and v > price * 1.005})
+
+    # 若附近沒有足夠層級，用 ATR 建立保守的第二層參考。
+    s1 = supports[-1] if supports else round(price - 0.8 * atr, 2)
+    s2 = supports[-2] if len(supports) >= 2 else round(s1 - 1.0 * atr, 2)
+    r1 = resistances[0] if resistances else round(price + 0.8 * atr, 2)
+    r2 = resistances[1] if len(resistances) >= 2 else round(r1 + 1.0 * atr, 2)
+
+    # 確保層級順序合理
+    s2 = min(s2, s1 - 0.01)
+    r2 = max(r2, r1 + 0.01)
+
+    # 不同交易模式的參考價：
+    # 當沖：較近的 ATR 風控；隔日沖：以第一支撐/第一壓力為核心。
+    daytrade_stop = max(0.01, price - 0.65 * atr)
+    overnight_stop = max(0.01, s1 - 0.25 * atr)
+    swing_stop = max(0.01, s2 - 0.25 * atr)
+
     return {
         "現價": round(price, 2),
+        "ATR14": round(atr, 2),
         "5日線": round(ma5, 2),
         "20日線": round(ma20, 2),
         "60日線": round(ma60, 2),
         "120日線": round(ma120, 2),
-        "第一支撐": sup_1,
-        "第二支撐": sup_2,
-        "第一壓力": res_1,
-        "第二壓力": res_2,
-        "建議進場點": round(sup_1 * 1.002, 2),
-        "第一停利點": res_1,
-        "第二停利點": res_2,
-        "嚴格停損點": round(sup_2 * 0.985, 2),
+        "第一支撐": round(s1, 2),
+        "第二支撐": round(s2, 2),
+        "第一壓力": round(r1, 2),
+        "第二壓力": round(r2, 2),
+        "Pivot": round(pp, 2),
+        "建議觀察進場區": f"{min(s1, price):.2f}～{price:.2f}",
+        "當沖停損參考": round(daytrade_stop, 2),
+        "隔日沖停損參考": round(overnight_stop, 2),
+        "波段停損參考": round(swing_stop, 2),
+        "第一停利": round(r1, 2),
+        "第二停利": round(r2, 2),
     }
 
+
+def calculate_technical_score(df):
+    """100分制量化評分；分數是篩選工具，不代表勝率或未來報酬保證。"""
+    if df.empty or len(df) < 60:
+        return {"score": 0, "details": {}, "signal": "資料不足"}
+
+    x = add_indicators(df)
+    r = x.iloc[-1]
+    prev = x.iloc[-2]
+    score = 0
+    d = {}
+
+    # 趨勢 30
+    trend = 0
+    if r["Close"] > r["MA5"]: trend += 5
+    if r["Close"] > r["MA20"]: trend += 8
+    if r["Close"] > r["MA60"]: trend += 8
+    if r["MA20"] > r["MA60"]: trend += 5
+    if r["MA60"] > r["MA120"]: trend += 4
+    d["趨勢"] = trend
+    score += trend
+
+    # 動能 20
+    mom = 0
+    rsi = float(r["RSI14"]) if pd.notna(r["RSI14"]) else 50
+    if 50 <= rsi <= 68: mom += 8
+    elif 45 <= rsi < 50: mom += 4
+    if r["Close"] > prev["Close"]: mom += 4
+    if r["Close"] > r["MA20"] and r["MA20"] > prev["MA20"]: mom += 8
+    d["動能"] = min(mom, 20)
+    score += d["動能"]
+
+    # 量價 25
+    vol = float(r["VolRatio"]) if pd.notna(r["VolRatio"]) else 1
+    q = 0
+    if 1.2 <= vol <= 3.5: q += 10
+    elif 1.0 <= vol < 1.2: q += 5
+    day_range = max(float(r["High"] - r["Low"]), 1e-9)
+    close_location = (float(r["Close"]) - float(r["Low"])) / day_range
+    if close_location >= 0.7: q += 8
+    elif close_location >= 0.5: q += 4
+    prev20_high = x["High"].rolling(20).max().shift(1).iloc[-1]
+    if pd.notna(prev20_high) and float(r["Close"]) > float(prev20_high):
+        q += 7
+    d["量價"] = min(q, 25)
+    score += d["量價"]
+
+    # 波動與風險 15
+    risk = 15
+    atr_pct = float(r["ATR14"]) / max(float(r["Close"]), 1e-9) * 100
+    if atr_pct > 8: risk -= 8
+    elif atr_pct > 5: risk -= 4
+    if rsi > 75: risk -= 5
+    d["風險調整"] = max(risk, 0)
+    score += d["風險調整"]
+
+    # 趨勢一致性 10
+    consistency = 0
+    if r["MA5"] > r["MA20"] > r["MA60"]: consistency += 10
+    elif r["MA5"] > r["MA20"]: consistency += 5
+    d["均線排列"] = consistency
+    score += consistency
+
+    score = int(max(0, min(100, score)))
+
+    if score >= 85:
+        signal = "A級：強勢候選"
+    elif score >= 75:
+        signal = "B級：觀察候選"
+    elif score >= 65:
+        signal = "C級：等待確認"
+    else:
+        signal = "D級：暫不列入"
+
+    return {"score": score, "details": d, "signal": signal}
+
+
+def calculate_intraday_score(df_5m):
+    """5分鐘K 當沖雷達：量能、VWAP、突破、收盤位置、波動。"""
+    if df_5m.empty or len(df_5m) < 30:
+        return {"score": 0, "signal": "5分鐘資料不足"}
+
+    x = df_5m.copy()
+    for c in ["Open", "High", "Low", "Close", "Volume"]:
+        x[c] = pd.to_numeric(x[c], errors="coerce")
+    x = x.dropna()
+    if len(x) < 30:
+        return {"score": 0, "signal": "5分鐘資料不足"}
+
+    pv = (x["Close"] * x["Volume"]).cumsum()
+    vv = x["Volume"].cumsum().replace(0, np.nan)
+    x["VWAP"] = pv / vv
+    x["VolMA20"] = x["Volume"].rolling(20).mean()
+
+    r = x.iloc[-1]
+    score = 0
+    if r["Close"] > r["VWAP"]: score += 25
+    if r["Volume"] > r["VolMA20"] * 1.5: score += 25
+    if r["Close"] > x["High"].rolling(20).max().shift(1).iloc[-1]: score += 25
+    day_range = max(r["High"] - r["Low"], 1e-9)
+    if (r["Close"] - r["Low"]) / day_range >= 0.7: score += 15
+    if r["Close"] > x["Close"].iloc[-2]: score += 10
+
+    signal = "A級當沖候選" if score >= 75 else "B級觀察" if score >= 60 else "排除"
+    return {"score": int(score), "signal": signal, "VWAP": round(float(r["VWAP"]), 2)}
+
+
+def calculate_overnight_score(df):
+    """隔日沖：日線趨勢＋尾盤強度＋量能＋突破。"""
+    if df.empty or len(df) < 60:
+        return {"score": 0, "signal": "資料不足"}
+
+    x = add_indicators(df)
+    r = x.iloc[-1]
+    score = 0
+
+    if r["Close"] > r["MA20"]: score += 20
+    if r["MA20"] > r["MA60"]: score += 15
+    if 1.2 <= r["VolRatio"] <= 3.5: score += 20
+
+    day_range = max(float(r["High"] - r["Low"]), 1e-9)
+    close_location = (float(r["Close"]) - float(r["Low"])) / day_range
+    if close_location >= 0.75: score += 20
+    elif close_location >= 0.6: score += 10
+
+    prev20 = x["High"].rolling(20).max().shift(1).iloc[-1]
+    if pd.notna(prev20) and r["Close"] > prev20: score += 25
+
+    signal = "A級隔日沖候選" if score >= 80 else "B級觀察" if score >= 65 else "排除"
+    return {"score": int(score), "signal": signal}
+
+# -------------------------------------------------------------
+# 籌碼與題材資料模擬（法人、融資融券、大戶與今日消息面）
+# -------------------------------------------------------------
 def get_institutional_chips(symbol):
+    """
+    不再捏造法人數字。
+    若沒有 TWSE/TPEX 即時資料，回傳「待取得」。
+    可在此接入官方 TWSE/TPEX API。
+    """
     return {
-        "外資買賣超": "+4,520 張 (偏多積極)",
-        "投信買賣超": "+1,850 張 (持續鎖碼)",
-        "自營商買賣超": "+320 張 (短線避險)",
-        "三大法人合計": "+6,690 張 (法人聯手買超)",
-        "融資變化": "+412 張 (散戶進場)",
-        "融券變化": "-120 張 (券商回補)",
-        "大戶持股變化": "5日籌碼集中度提升 (+1.8%)"
+        "外資買賣超": "待取得官方資料",
+        "投信買賣超": "待取得官方資料",
+        "自營商買賣超": "待取得官方資料",
+        "三大法人合計": "待取得官方資料",
+        "融資變化": "待取得官方資料",
+        "融券變化": "待取得官方資料",
+        "大戶持股變化": "待取得官方資料",
     }
+
 
 def get_market_catalyst(symbol):
-    return [
-        {"category": "🔥 AI / HPC / CoWoS 題材", "desc": "受惠全球雲端資料中心與輝達晶片強勁拉貨，供應鏈訂單能見度延續至明年。"},
-        {"category": "📈 公司重大訊息與法說會", "desc": "近期法說會釋出正向展望，產能利用率維持高檔，毛利率優於市場預期。"},
-        {"category": "📦 新產品與新訂單", "desc": "高階伺服器主機板與次世代晶片封測專案順利通過客戶驗證，出貨放量。"},
-        {"category": "🌏 國際市場與美股連動", "desc": "美股四大指數科技股表現強勢，帶動亞股相關供應鏈比價效應。"}
-    ]
+    # 不產生虛構新聞；由新聞模組接入真實來源後填入。
+    return [{
+        "category": "📰 最新消息",
+        "desc": "目前程式未接入即時新聞來源；請勿把預設文字視為真實新聞。"
+    }]
 
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V8.6")
+st.sidebar.title("⚙️ 33 專業操盤系統 V9.0")
 page = st.sidebar.radio(
     "功能模組",
     [
-        "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)",
+        "🔍 全市場個股深度分析 (量化評分+雙支撐雙壓力)",
         "🕒 13:00 台股隔日沖高勝率選股",
         "⏰ 04:00 美股極速當沖雷達",
+        "🚨 台股全市場自動選股雷達",
         "📰 跨國財經新聞與題材面解析",
         "🏠 個人自選股監控儀表板",
     ],
@@ -281,11 +636,11 @@ watch_text = st.sidebar.text_area(
 watchlist = [s.strip() for s in re.split(r"[,\n\s]+", watch_text) if s.strip()]
 
 # -------------------------------------------------------------
-# Page 1: Deep Analysis
+# Page 1: Deep Analysis (量化評分 + 第一/第二支撐壓力)
 # -----------------------------
-if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)":
+if page == "🔍 全市場個股深度分析 (量化評分+雙支撐雙壓力)":
     st.title("🔍 專家級全方位個股深度分析")
-    st.markdown("同步解構：**三大法人籌碼、融資融券、多週期均線防守點、第一/第二支撐與壓力、基本面財務指標與最新題材消息**。")
+    st.markdown("同步解構：**三大法人籌碼、融資融券、多週期均線防守點（5日/20日/60日/120日）、基本面財務指標與最新題材消息**。")
     
     manual_input = st.text_input("輸入代號（例: 6669, 3711, 2330, NVDA, 7203.T）", value="6669")
     target_symbol = manual_input.strip() if manual_input else "6669"
@@ -305,6 +660,7 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
         st.markdown(f"## 📌 [{market_type}] {d_name} (`{target_symbol}`) 專家操盤全景")
         st.markdown(f"🏢 **企業業務與定位**：{desc}")
 
+        # 核心數據指標
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("最新收盤價", f"${r['Close']:,.2f}")
         c2.metric("本益比 (P/E)", f"{pe}")
@@ -313,6 +669,7 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
 
         st.markdown("---")
 
+        # 1. 籌碼與融資融券區
         st.subheader("📊 三大法人籌碼與信用額度監控")
         ch1, ch2, ch3, ch4 = st.columns(4)
         ch1.metric("外資買賣超", chips["外資買賣超"])
@@ -320,24 +677,22 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
         ch3.metric("三大法人合計", chips["三大法人合計"])
         ch4.metric("大戶持股變化", chips["大戶持股變化"])
         
-        st.info(f"💡 **信用籌碼狀態**：融資變化 `{chips['融資變化']}` | 融券變化 `{chips['融券變化']}`")
+        st.info(f"💡 **信用籌碼狀態**：融資變化 `{chips['融資變化']}` | 融券變化 `{chips['融券變化']}` (散戶與主力籌碼對比健康)")
 
         st.markdown("---")
 
+        # 2. 多週期均線支撐與壓力
         col_sr1, col_sr2 = st.columns(2)
         if sr:
             with col_sr1:
-                st.markdown("### 🎯 專家進場與買賣點規劃")
+                st.markdown("### 🎯 多週期均線防守點與買賣點")
                 st.markdown(f"""
                 <div class="trade-box">
                     <b>🟢 專家建議進場點 (拉回低接)</b><br><span style="font-size: 22px; color: #38bdf8; font-weight: bold;">${sr['建議進場點']:,.2f}</span><br>
-                    <small>策略：貼近支撐分批佈局，嚴禁追高。</small>
+                    <small>策略：貼近短線支撐分批佈局，嚴禁追高。</small>
                 </div>
                 <div class="trade-box" style="border-left-color: #f59e0b; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(180, 83, 9, 0.2) 100%);">
                     <b>🎯 第一停利目標</b><br><span style="font-size: 22px; color: #f59e0b; font-weight: bold;">${sr['第一停利點']:,.2f}</span>
-                </div>
-                <div class="trade-box" style="border-left-color: #a855f7; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(107, 33, 168, 0.2) 100%);">
-                    <b>🚀 第二停利目標</b><br><span style="font-size: 22px; color: #a855f7; font-weight: bold;">${sr['第二停利點']:,.2f}</span>
                 </div>
                 <div class="trade-box" style="border-left-color: #ef4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(153, 27, 27, 0.2) 100%);">
                     <b>🛑 嚴格停損防守點</b><br><span style="font-size: 22px; color: #ef4444; font-weight: bold;">${sr['嚴格停損點']:,.2f}</span>
@@ -345,30 +700,25 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
                 """, unsafe_allow_html=True)
 
             with col_sr2:
-                st.markdown("### 🛡️ 第一/第二支撐與壓力 ＆ 多週期防守")
-                # 使用最安全的普通字串相加，完全避開 f-string 解析風險
-                ma_summary = "均線參考：5日線 $" + f"{sr['5日線']:,.2f}" + " | 20日線 $" + f"{sr['20日線']:,.2f}" + " \vert{} 60日線 $" + f"{sr['60日線']:,.2f}"
-
+                st.markdown("### 🛡️ 多週期均線防守區間")
                 st.markdown(f"""
                 <div class="support-box">
-                    <b>🟢 第一支撐 (近端防守)</b><br><span style="font-size: 20px; color: #34d399; font-weight: bold;">${sr['第一支撐']:,.2f}</span>
+                    <b>⚡ 5日線 (短線強弱分水嶺)</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['5日線(短線防守)']:,.2f}</span>
                 </div>
                 <div class="support-box">
-                    <b>🟢 第二支撐 (強力護盤)</b><br><span style="font-size: 20px; color: #34d399; font-weight: bold;">${sr['第二支撐']:,.2f}</span>
+                    <b>🟢 20日線 (月線波段支撐)</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['20日線(月線支撐)']:,.2f}</span>
+                </div>
+                <div class="support-box">
+                    <b>🛡️ 60日線 (季線中期防守)</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['60日線(季線防守)']:,.2f}</span>
                 </div>
                 <div class="resistance-box">
-                    <b>🔴 第一壓力 (短線解套賣壓)</b><br><span style="font-size: 20px; color: #f87171; font-weight: bold;">${sr['第一壓力']:,.2f}</span>
-                </div>
-                <div class="resistance-box" style="border-left-color: #f43f5e;">
-                    <b>🔴 第二壓力 (波段極限價)</b><br><span style="font-size: 20px; color: #f43f5e; font-weight: bold;">${sr['第二壓力']:,.2f}</span>
-                </div>
-                <div class="small-note" style="margin-top: 10px;">
-                    📌 {ma_summary}
+                    <b>🔴 120/240日線 (中長期多空趨勢)</b><br><span style="font-size: 18px; color: #f87171; font-weight: bold;">${sr['120/240日線(中長期趨勢)']:,.2f}</span>
                 </div>
                 """, unsafe_allow_html=True)
 
         st.markdown("---")
 
+        # 3. 基本面財務健康檢查
         st.subheader("💰 基本面財務健康與賺錢能力")
         f1, f2, f3, f4 = st.columns(4)
         f1.metric("營收年增率 (YoY)", rev_yoy)
@@ -378,6 +728,7 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
 
         st.markdown("---")
 
+        # 4. 訊息面與題材解析 (為什麼今天會漲？)
         st.subheader("📰 訊息面與產業題材解析（為什麼今天會漲？）")
         for cat in catalysts:
             st.markdown(f"""
@@ -391,85 +742,140 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
         st.line_chart(x[["Close", "MA5", "MA20", "MA60"]].dropna(how="all"))
 
 # -------------------------------------------------------------
-# Page 2: Taiwan 13:00 Overnight Scanner
+# Page 2: Taiwan 13:00 Overnight Scanner (隔日沖)
 # -----------------------------
 elif page == "🕒 13:00 台股隔日沖高勝率選股":
-    st.title("🕒 13:00 台股收盤前隔日沖高勝率選股")
-    st.markdown("結合「法人買超籌碼」、「短線 5 日線強勢」與「尾盤鎖碼力道」之高勝率選股模組。")
+    st.title("🕒 台股隔日沖量化雷達")
+    st.markdown("以趨勢、量價、尾盤位置、突破與風險距離篩選；不宣稱或保證 99% 勝率。")
 
     tw_pool = ["2330", "3711", "6669", "5274", "2454", "2317", "2603", "3017", "3008"]
     rows = []
     for sym in tw_pool:
-        df = get_history(sym, "5d")
-        if not df.empty and len(df) >= 2:
-            c_p = float(df["Close"].iloc[-1])
-            p_p = float(df["Close"].iloc[-2])
-            high_p = float(df["High"].iloc[-1])
-            low_p = float(df["Low"].iloc[-1])
-            chg = ((c_p - p_p) / p_p) * 100
-            
-            total_range = high_p - low_p if high_p != low_p else 1.0
-            upper_shadow = high_p - c_p
-            is_strong_close = (upper_shadow / total_range) < 0.3
-            
-            vol_ratio = float(df["Volume"].iloc[-1] / df["Volume"].rolling(5).mean().iloc[-1]) if pd.notna(df["Volume"].rolling(5).mean().iloc[-1]) else 1.0
+        df = get_history(sym, "1y")
+        if not df.empty:
+            q = calculate_overnight_score(df)
+            tech = calculate_technical_score(df)
             sr = calculate_support_resistance(df)
-            
-            if sr and chg > 1.5 and vol_ratio > 1.2 and is_strong_close:
+            if sr and q["score"] >= 65:
                 rows.append({
                     "代碼": sym,
                     "中文名稱": display_name(sym),
-                    "收盤現價": f"${c_p:,.2f}",
-                    "今日漲幅": f"{chg:+.2f}%",
-                    "量比": f"{vol_ratio:.2f}x",
-                    "第一壓力": f"${sr['第一壓力']:,.2f}",
-                    "第二壓力": f"${sr['第二壓力']:,.2f}",
-                    "第一支撐": f"${sr['第一支撐']:,.2f}",
-                    "第二支撐": f"${sr['第二支撐']:,.2f}",
+                    "收盤價": round(sr["現價"], 2),
+                    "隔日沖分數": q["score"],
+                    "技術分數": tech["score"],
+                    "第一支撐": sr["第一支撐"],
+                    "第二支撐": sr["第二支撐"],
+                    "第一壓力": sr["第一壓力"],
+                    "第二壓力": sr["第二壓力"],
+                    "隔日沖停損參考": sr["隔日沖停損參考"],
+                    "第一目標": sr["第一停利"],
+                    "第二目標": sr["第二停利"],
+                    "訊號": q["signal"],
                 })
 
     if rows:
-        st.success(f"成功篩選出 {len(rows)} 檔符合法人籌碼與隔日沖條件的高勝率標的！")
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.success(f"量化條件篩出 {len(rows)} 檔候選股。")
+        st.dataframe(pd.DataFrame(rows).sort_values(["隔日沖分數", "技術分數"], ascending=False),
+                     use_container_width=True, hide_index=True)
     else:
-        st.warning("今日 13:00 盤勢震盪，暫無符合嚴格條件的隔日沖標的。")
+        st.warning("目前沒有達到嚴格量化門檻的隔日沖候選股，寧可空手等待。")
 
 # -------------------------------------------------------------
-# Page 3: US 04:00 Intraday Scanner
+# Page 3: US 04:00 Intraday Scanner (當沖)
 # -----------------------------
 elif page == "⏰ 04:00 美股極速當沖雷達":
-    st.title("⏰ 04:00 美國股市收盤當日當沖雷達")
-    st.markdown("篩選美股科技巨頭與 AI 概念股波動率大、成交活躍之當沖標的。")
+    st.title("⏰ 當沖量化雷達")
+    st.markdown("日線方向 + 5分鐘VWAP/量能/突破。yfinance 的盤中資料受資料源與市場時段限制，請以券商即時報價核對。")
 
-    us_pool = ["NVDA", "AAPL", "TSLA", "MSFT", "QQQ", "SOXL"]
+    us_pool = ["NVDA", "AAPL", "TSLA", "MSFT", "QQQ"]
     rows = []
     for sym in us_pool:
-        df = get_history(sym, "5d")
-        if not df.empty and len(df) >= 2:
-            c_p = float(df["Close"].iloc[-1])
-            p_p = float(df["Close"].iloc[-2])
-            chg = ((c_p - p_p) / p_p) * 100
-            sr = calculate_support_resistance(df)
-            
-            if sr and abs(chg) > 1.5:
+        # 5m 資料通常只能取得近期窗口；實際可用性依資料源而異。
+        df5 = get_history(sym, "5d", "5m")
+        dfd = get_history(sym, "1y", "1d")
+        if not dfd.empty:
+            sr = calculate_support_resistance(dfd)
+            iq = calculate_intraday_score(df5)
+            if sr and iq["score"] >= 60:
                 rows.append({
                     "代碼": sym,
                     "中文名稱": display_name(sym),
-                    "收盤價": f"${c_p:,.2f}",
-                    "漲跌幅": f"{chg:+.2f}%",
-                    "第一壓力": f"${sr['第一壓力']:,.2f}",
-                    "第一支撐": f"${sr['第一支撐']:,.2f}",
-                    "建議進場": f"${sr['建議進場點']:,.2f}",
+                    "現價": sr["現價"],
+                    "當沖分數": iq["score"],
+                    "訊號": iq["signal"],
+                    "VWAP": iq.get("VWAP", "—"),
+                    "第一支撐": sr["第一支撐"],
+                    "第二支撐": sr["第二支撐"],
+                    "第一壓力": sr["第一壓力"],
+                    "第二壓力": sr["第二壓力"],
+                    "當沖停損參考": sr["當沖停損參考"],
+                    "第一目標": sr["第一停利"],
+                    "第二目標": sr["第二停利"],
                 })
 
     if rows:
-        st.success(f"成功篩選出 {len(rows)} 檔美股當沖標的！")
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.success(f"量化條件篩出 {len(rows)} 檔當沖候選股。")
+        st.dataframe(pd.DataFrame(rows).sort_values("當沖分數", ascending=False),
+                     use_container_width=True, hide_index=True)
     else:
-        st.warning("今日美股波動率平緩，建議等待開盤量能表態。")
+        st.warning("目前沒有達到嚴格當沖門檻的標的，等待量能與VWAP確認。")
 
 # -------------------------------------------------------------
-# Page 4: News & Catalysts
+# Page 4: Taiwan Full-Market Quant Scanner
+# -------------------------------------------------------------
+elif page == "🚨 台股全市場自動選股雷達":
+    st.title("🚨 台股全市場自動選股雷達")
+    st.markdown(
+        "先找市場活躍股票，再用趨勢、量價、突破、ATR與風險報酬做第二階段嚴格篩選。"
+    )
+
+    max_scan = st.slider("完整量化分析最多股票數", 30, 200, 100, 10)
+    only_strict = st.checkbox("只顯示「嚴格入選」", value=True)
+    run = st.button("🚀 開始全市場掃描", type="primary")
+
+    if run:
+        with st.spinner("正在取得市場股票池並進行多因子量化分析……"):
+            universe = get_full_market_universe()
+            st.caption(f"目前取得股票池：{len(universe)} 檔；實際完整分析上限：{max_scan} 檔。")
+            result = run_market_scan(universe, max_scan=max_scan)
+
+        if result.empty:
+            st.error(
+                "目前沒有取得足夠的市場資料。這通常是交易所/yfinance資料源暫時限制；"
+                "請稍後重試，或先用自選股監控。"
+            )
+        else:
+            view = result[result["訊號"] == "🔥 嚴格入選"] if only_strict else result
+            st.success(f"完成掃描，共產生 {len(view)} 檔結果。")
+
+            if not view.empty:
+                st.dataframe(view, use_container_width=True, hide_index=True)
+
+                st.markdown("### 🎯 今日優先研究區")
+                top = view.head(10)
+                st.dataframe(
+                    top[
+                        [
+                            "代碼", "中文名稱", "收盤", "綜合分數",
+                            "第一支撐", "第二支撐",
+                            "第一壓力", "第二壓力",
+                            "風險報酬比", "隔日沖停損",
+                            "第一目標", "第二目標"
+                        ]
+                    ],
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.warning("今天沒有通過嚴格條件的股票。系統維持空手，不強迫交易。")
+
+            st.info(
+                "⚠️ 本頁是量化篩選器，不是99%勝率保證。"
+                "正式下單前仍應以券商即時報價、公告、法人資料與實際盤中流動性再次確認。"
+            )
+
+# -------------------------------------------------------------
+# Page 5: News & Catalysts
 # -----------------------------
 elif page == "📰 跨國財經新聞與題材面解析":
     st.title("📰 跨國財經新聞與產業題材深度解析")
@@ -478,12 +884,16 @@ elif page == "📰 跨國財經新聞與題材面解析":
     st.markdown("""
     <div class="report-card">
         <h3>🔥 AI / HPC / CoWoS 產業題材持續發酵</h3>
-        <p>全球雲端服務商（CSP）資本支出維持高檔，帶動台灣半導體上中下游營收顯著成長。基本面穩健搭配法人買超，為長線與短線勝率的重要保證。</p>
+        <p>全球雲端服務商（CSP）資本支出維持高檔，帶動台灣半導體上中下游（台積電、日月光投控、緯穎、信驊）營收顯著成長。基本面穩健搭配法人買超，為長線與短線勝率的重要保證。</p>
+    </div>
+    <div class="report-card">
+        <h3>📈 法說會與重大訊息追蹤</h3>
+        <p>系統持續監控各企業法說會釋出的毛利率與產能擴產進度。當本益比尚未過度反應獲利成長時，拉回月線與季線即是最佳的專家級買點。</p>
     </div>
     """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# Page 5: Watchlist Overview
+# Page 6: Watchlist Overview
 # -----------------------------
 elif page == "🏠 個人自選股監控儀表板":
     st.title("🏠 個人自選股即時監控儀表板")
@@ -493,8 +903,7 @@ elif page == "🏠 個人自選股監控儀表板":
     for sym in watchlist:
         df = get_history(sym, "1y")
         div, desc, mkt, pe, roe, eps, gross_m, op_m, rev_yoy = get_asset_meta(sym)
-        sr = calculate_support_resistance(df)
-        if df.empty or not sr:
+        if df.empty:
             rows.append({"代碼": sym, "中文名稱": display_name(sym), "市場": mkt, "狀態": "無資料"})
             continue
         r = df.iloc[-1]
@@ -502,16 +911,16 @@ elif page == "🏠 個人自選股監控儀表板":
         rows.append({
             "代碼": sym,
             "中文名稱": display_name(sym),
-            "最新收盤": round(float(r["Close"]), 2),
+            "市場板塊": mkt,
+            "最新收盤價": round(float(r["Close"]), 2),
             "日漲跌幅": chg,
-            "第一支撐": sr["第一支撐"],
-            "第二支撐": sr["第二支撐"],
-            "第一壓力": sr["第一壓力"],
-            "第二壓力": sr["第二壓力"],
+            "本益比": pe,
+            "ROE": roe,
+            "營收YoY": rev_yoy,
         })
     snap_df = pd.DataFrame(rows)
     if not snap_df.empty:
         st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V8.6 最終防錯版：完整呈現第一/第二支撐與壓力，運行穩定。")
+st.caption("33 專業操盤系統 V10.0 全市場量化雷達：全市場候選池、多因子評分、第一/第二支撐壓力、當沖與隔日沖篩選。")
