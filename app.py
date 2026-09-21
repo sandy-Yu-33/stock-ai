@@ -18,8 +18,8 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V16.0 智慧代號辨識版",
-    page_icon="⚡",
+    page_title="33 專業操盤系統 V17.0 中文名稱完美對應版",
+    page_icon="🎯",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -66,11 +66,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 DEFAULT_WATCHLIST = [
-    "2330", "1605", "3711", "6669", "5274", "2317", "2454", "NVDA", "AAPL", "TSLA", "7203.T", "005930.KS"
+    "2330", "2368", "1605", "3711", "6669", "5274", "2317", "2454", "NVDA", "AAPL", "TSLA"
 ]
 
+# 擴充更完整的台美日韓常用標的與其中文名稱、業務描述
 GLOBAL_ASSET_DATABASE = {
-    "2330.TW": {"name": "台積電", "market": "台股上市", "desc": "全球晶圓代工龍頭，以先進製程（3奈米、2奈米）與CoWoS先進封裝技術獨步全球，掌握全球AI與HPC晶片命脈。"},
+    "2330.TW": {"name": "台積電", "market": "台股上市", "desc": "全球晶圓代工龍頭，以先進製程與CoWoS先進封裝技術獨步全球，掌握全球AI與HPC晶片命脈。"},
+    "2368.TW": {"name": "金像電", "market": "台股上市", "desc": "全球伺服器與網通 PCB（印刷電路板）領導大廠，深度受惠於 AI 伺服器與高階交換器升級商機。"},
     "1605.TW": {"name": "華新", "market": "台股上市", "desc": "台灣電線電纜與不銹鋼大廠，近年積極轉型佈局新能源、綠能與海纜等精密製造領域。"},
     "3711.TW": {"name": "日月光投控", "market": "台股上市", "desc": "全球半導體封測（OSAT）龍頭，提供晶片封裝、測試及材料服務，受惠於異質整合與先進封裝外包商機。"},
     "6669.TW": {"name": "緯穎", "market": "台股上市", "desc": "專注於雲端資料中心 IT 基礎架構與超大型雲端服務商（CSP）的 AI 伺服器主機板與機櫃解決方案供應商。"},
@@ -109,19 +111,37 @@ def fetch_stock_display_name(symbol):
     if sym in GLOBAL_ASSET_DATABASE:
         return GLOBAL_ASSET_DATABASE[sym]["name"]
     
-    # 嘗試透過 yfinance 取得真實公司名稱
+    code = sym.split(".")[0]
+    
+    # 嘗試從證交所或櫃買中心當日行情表抓取真實中文股名
+    if requests is not None:
+        try:
+            url = "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX"
+            rr = requests.get(url, params={"response": "json"}, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+            if rr.status_code == 200:
+                data = rr.json()
+                for table in data.get("tables", []):
+                    fields, rows = table.get("fields", []), table.get("data", [])
+                    c_idx = next((i for i, f in enumerate(fields) if "證券代號" in str(f)), None)
+                    n_idx = next((i for i, f in enumerate(fields) if "證券名稱" in str(f)), None)
+                    if c_idx is not None and n_idx is not None:
+                        for row in rows:
+                            if c_idx < len(row) and str(row[c_idx]).strip() == code:
+                                return str(row[n_idx]).strip()
+        except Exception:
+            pass
+
+    # 備援：透過 yfinance 取得名稱
     try:
         t = yf.Ticker(sym)
         info = t.info
         name = info.get("chineseName") or info.get("longName") or info.get("shortName")
-        if name:
+        if name and name != sym:
             return name
     except Exception:
         pass
     
-    # 若為台股數字，提供基本備援
-    base_code = sym.split(".")[0]
-    return f"台股代號 {base_code}"
+    return f"台股 {code}"
 
 def display_name(symbol):
     return fetch_stock_display_name(symbol)
@@ -131,9 +151,9 @@ def get_asset_desc(symbol):
     if sym in GLOBAL_ASSET_DATABASE:
         return GLOBAL_ASSET_DATABASE[sym]["desc"]
     
-    # 動態產生預設專業描述
     name = display_name(symbol)
-    return f"{name}（{symbol}）：經市場驗證之重要交易標的，具備特定產業供應鏈地位與市場流動性。"
+    code = sym.split(".")[0]
+    return f"{name}（代號：{code}）：經市場嚴證之實戰交易標的，具備特定產業供應鏈地位與市場流動性。"
 
 @st.cache_data(ttl=900, show_spinner=False)
 def get_twse_daily_fundamental(symbol):
@@ -349,7 +369,7 @@ def calculate_support_resistance_and_rr(df):
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V16.0")
+st.sidebar.title("⚙️ 33 專業操盤系統 V17.0")
 page = st.sidebar.radio(
     "功能模組",
     [
@@ -379,8 +399,8 @@ if page == "🔍 個股全方位深度解析 (企業業務+法人籌碼+支撐�
     st.title("🔍 專家級個股全方位深度解析")
     st.markdown("老手箴言：**買股票前先搞懂它是做什麼的、法人買不買單、以及 RR 值安不安全**。")
     
-    manual_input = st.text_input("輸入代號（例: 2330, 1605, 6669, NVDA）", value="1605")
-    target_symbol = manual_input.strip() if manual_input else "1605"
+    manual_input = st.text_input("輸入代號（例: 2330, 2368, 1605, NVDA）", value="2368")
+    target_symbol = manual_input.strip() if manual_input else "2368"
 
     df = get_history(target_symbol, "1y")
     if df.empty:
@@ -396,7 +416,6 @@ if page == "🔍 個股全方位深度解析 (企業業務+法人籌碼+支撐�
 
         st.markdown(f"## 📌 {d_name} (`{target_symbol}`) 實戰全景面板")
         
-        # 企業業務說明卡片
         st.markdown(f"""
         <div class="fundamental-box">
             <b>🏢 這間公司是做什麼的（核心業務與產業定位）</b><br>
@@ -412,7 +431,6 @@ if page == "🔍 個股全方位深度解析 (企業業務+法人籌碼+支撐�
 
         st.markdown("---")
 
-        # 法人籌碼區
         st.subheader("📊 三大法人最新籌碼動向")
         if inst:
             ic1, ic2, ic3, ic4 = st.columns(4)
@@ -426,7 +444,6 @@ if page == "🔍 個股全方位深度解析 (企業業務+法人籌碼+支撐�
 
         st.markdown("---")
 
-        # 支撐壓力與風控
         col_a, col_b = st.columns(2)
         with col_a:
             st.markdown(f"""
@@ -456,7 +473,6 @@ if page == "🔍 個股全方位深度解析 (企業業務+法人籌碼+支撐�
         </div>
         """, unsafe_allow_html=True)
 
-        # 基本面財務
         st.subheader("💰 基本面與賺錢能力")
         f1, f2, f3, f4 = st.columns(4)
         f1.metric("營收年增率 (YoY)", rev_yoy)
@@ -473,7 +489,7 @@ if page == "🔍 個股全方位深度解析 (企業業務+法人籌碼+支撐�
 elif page == "🕒 台股 13:00 隔日沖高勝率雷達":
     st.title("🕒 13:00 台股收盤前隔日沖高勝率雷達")
     st.markdown("鎖定台股權值與強勢飆股，結合尾盤量比與技術突破，快速挑選隔日具備爆發力的候選股。")
-    tw_pool = ["2330", "1605", "3711", "6669", "5274", "2454", "2317"]
+    tw_pool = ["2330", "2368", "1605", "3711", "6669", "5274", "2454", "2317"]
     rows = []
     for sym in tw_pool:
         df = get_history(sym, "6mo")
@@ -524,7 +540,7 @@ elif page == "📰 各國財經新聞與產業題材深度解析":
     st.markdown("""
     <div class="news-card">
         <h3>🇹🇼 台灣股市：AI 伺服器與先進封裝供應鏈動能強勁</h3>
-        <p><b>核心解讀：</b>台積電先進製程與 CoWoS 產線持續滿載，結合緯穎、鴻海等伺服器廠出貨放量，外資與投信在權值股中交替主導行情。操盤手應緊盯法人動向與月線防守點，拉回即是分批佈局良機。</p>
+        <p><b>核心解讀：</b>台積電先進製程與 CoWoS 產線持續滿載，結合緯穎、鴻海、金像電等伺服器與網通廠出貨放量，外資與投信在權值股中交替主導行情。操盤手應緊盯法人動向與月線防守點，拉回即是分批佈局良機。</p>
     </div>
 
     <div class="news-card">
@@ -573,4 +589,4 @@ elif page == "📊 自選股風險報酬監控儀表板":
         st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V16.0：智慧代號辨識、企業核心業務解析、法人籌碼與各國財經新聞題材全面升級。")
+st.caption("33 專業操盤系統 V17.0：中文名稱完美解析、企業核心業務、法人籌碼與各國財經新聞題材全面到位。")
