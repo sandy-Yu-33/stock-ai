@@ -17,7 +17,7 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V11.0 專業量化交易雷達版",
+    page_title="33 專業操盤系統 V12.0 專業量化交易雷達版",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -151,7 +151,10 @@ def get_twse_daily_fundamental(symbol):
             if rr.status_code != 200:
                 continue
             data = rr.json()
-            for table in data.get("tables", []):
+            tables = list(data.get("tables", []))
+            if data.get("fields") and data.get("data"):
+                tables.append({"fields": data.get("fields"), "data": data.get("data")})
+            for table in tables:
                 fields, rows = table.get("fields", []), table.get("data", [])
                 if not fields or not rows:
                     continue
@@ -228,119 +231,173 @@ def get_asset_meta(symbol):
     desc = base.get("desc", "市場資料")
     market = base.get("market", "全球市場")
 
-    yf_f = get_yfinance_fundamentals(sym)
-    twse_f = get_twse_daily_fundamental(sym)
+    yf_f = get_yfinance_fundamentals(sym) or {}
+    twse_f = get_twse_daily_fundamental(sym) or {}
 
-    pe = twse_f.get("pe") if twse_f else None
-    eps = yf_f.get("eps") if yf_f else None
-    if pe is None and eps and eps > 0:
-        try:
-            hist = get_history(sym, "5d")
-            if not hist.empty:
-                pe = float(hist["Close"].iloc[-1]) / eps
-        except Exception:
-            pass
+    pe_raw = twse_f.get("pe") if twse_f else None
+    eps_raw = yf_f.get("eps")
+    roe_raw = yf_f.get("roe")
+    gross_raw = yf_f.get("gross_margin")
+    op_raw = yf_f.get("op_margin")
+    rev_raw = yf_f.get("revenue_growth")
+
+    # 外部資料源暫時失敗時，使用程式內既有資料庫作備援，並保留「無資料」作最後結果。
+    if pe_raw is None: pe_raw = base.get("pe")
+    if eps_raw is None: eps_raw = _parse_numeric_text(base.get("eps"))
+    if roe_raw is None: roe_raw = _parse_percent_text(base.get("roe"))
+    if gross_raw is None: gross_raw = _parse_percent_text(base.get("gross_margin"))
+    if op_raw is None: op_raw = _parse_percent_text(base.get("op_margin"))
+    if rev_raw is None: rev_raw = _parse_percent_text(base.get("revenue_yoy"))
 
     return (
         div, desc, market,
-        _fmt_num(pe),
-        _fmt_percent(yf_f.get("roe") if yf_f else None),
-        _fmt_num(eps, "元"),
-        _fmt_percent(yf_f.get("gross_margin") if yf_f else None),
-        _fmt_percent(yf_f.get("op_margin") if yf_f else None),
-        _fmt_percent(yf_f.get("revenue_growth") if yf_f else None),
+        _fmt_num(pe_raw),
+        _fmt_percent(roe_raw),
+        _fmt_num(eps_raw, "元"),
+        _fmt_percent(gross_raw),
+        _fmt_percent(op_raw),
+        _fmt_percent(rev_raw),
     )
+
+
+def _parse_numeric_text(v):
+    if v is None: return None
+    try:
+        m = re.search(r"-?\d+(?:\.\d+)?", str(v).replace(",", ""))
+        return float(m.group()) if m else None
+    except Exception:
+        return None
+
+
+def _parse_percent_text(v):
+    if v is None: return None
+    try:
+        s = str(v).replace(",", "").strip()
+        m = re.search(r"-?\d+(?:\.\d+)?", s)
+        if not m: return None
+        n = float(m.group())
+        return n / 100.0 if "%" in s else n
+    except Exception:
+        return None
 
 
 @st.cache_data(ttl=900, show_spinner=False)
 def get_twse_institutional(symbol):
-    """TWSE 官方三大法人買賣超，單位轉成張。"""
+    """TWSE 官方三大法人買賣超；JSON失敗時以官方HTML表格作備援。單位：張。"""
     code = normalize_symbol(symbol).split(".")[0]
     if not re.fullmatch(r"\d{4}", code) or requests is None:
         return None
-    for days_back in range(0, 11):
-        d = (datetime.now() - pd.Timedelta(days=days_back)).strftime("%Y%m%d")
+
+    def parse_rows(fields, rows, d):
+        if not fields or not rows: return None
+        code_idx = next((i for i,f in enumerate(fields) if "證券代號" in str(f)), None)
+        if code_idx is None: return None
+        for row in rows:
+            if code_idx < len(row) and str(row[code_idx]).strip() == code:
+                def val(words):
+                    for i,f in enumerate(fields):
+                        if all(w in str(f) for w in words) and i < len(row):
+                            try:
+                                s=str(row[i]).replace(",","").strip()
+                                if s not in ("","--","---","nan","None"):
+                                    return float(s)/1000.0
+                            except Exception: pass
+                    return None
+                return {
+                    "date":d,
+                    "外資買賣超":val(["外陸資買賣超股數"]),
+                    "投信買賣超":val(["投信買賣超股數"]),
+                    "自營商買賣超":val(["自營商買賣超股數"]),
+                    "三大法人合計":val(["三大法人買賣超股數"]),
+                }
+        return None
+
+    for days_back in range(11):
+        d=(datetime.now()-pd.Timedelta(days=days_back)).strftime("%Y%m%d")
+        url="https://www.twse.com.tw/rwd/zh/fund/T86"
         try:
-            url = "https://www.twse.com.tw/rwd/zh/fund/T86"
-            params = {"date": d, "selectType": "ALLBUT0999", "response": "json"}
-            rr = requests.get(url, params=params, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
-            if rr.status_code != 200:
-                continue
-            data = rr.json()
-            for table in data.get("tables", []):
-                fields, rows = table.get("fields", []), table.get("data", [])
-                if not fields or not rows:
-                    continue
-                code_idx = next((i for i, f in enumerate(fields) if "證券代號" in str(f)), None)
-                if code_idx is None:
-                    continue
-                for row in rows:
-                    if code_idx < len(row) and str(row[code_idx]).strip() == code:
-                        def find_value(words):
-                            for i, f in enumerate(fields):
-                                if all(w in str(f) for w in words) and i < len(row):
-                                    try:
-                                        return float(str(row[i]).replace(",", "")) / 1000.0
-                                    except Exception:
-                                        pass
-                            return None
-                        return {
-                            "date": d,
-                            "外資買賣超": find_value(["外陸資買賣超股數"]),
-                            "投信買賣超": find_value(["投信買賣超股數"]),
-                            "自營商買賣超": find_value(["自營商買賣超股數"]),
-                            "三大法人合計": find_value(["三大法人買賣超股數"]),
-                        }
+            rr=requests.get(url,params={"date":d,"selectType":"ALLBUT0999","response":"json"},
+                            timeout=10,headers={"User-Agent":"Mozilla/5.0"})
+            if rr.status_code==200:
+                data=rr.json()
+                tables=list(data.get("tables",[]))
+                if data.get("fields") and data.get("data"):
+                    tables.append({"fields":data["fields"],"data":data["data"]})
+                for tb in tables:
+                    got=parse_rows(tb.get("fields",[]),tb.get("data",[]),d)
+                    if got: return got
         except Exception:
-            continue
+            pass
+        try:
+            rr=requests.get(url,params={"date":d,"selectType":"ALLBUT0999","response":"html"},
+                            timeout=10,headers={"User-Agent":"Mozilla/5.0"})
+            if rr.status_code==200:
+                for tb in pd.read_html(StringIO(rr.text)):
+                    tb=tb.dropna(how="all")
+                    if tb.empty: continue
+                    if isinstance(tb.columns,pd.MultiIndex):
+                        tb.columns=[" ".join(str(x) for x in c if str(x)!="nan").strip() for c in tb.columns]
+                    got=parse_rows([str(c) for c in tb.columns],tb.astype(str).values.tolist(),d)
+                    if got: return got
+        except Exception:
+            pass
     return None
 
 
 @st.cache_data(ttl=900, show_spinner=False)
 def get_twse_margin(symbol):
-    """TWSE 官方個股融資融券餘額，單位轉成張。"""
-    code = normalize_symbol(symbol).split(".")[0]
-    if not re.fullmatch(r"\d{4}", code) or requests is None:
+    """TWSE 官方融資融券；JSON失敗時以官方HTML表格作備援。單位：張。"""
+    code=normalize_symbol(symbol).split(".")[0]
+    if not re.fullmatch(r"\d{4}",code) or requests is None: return None
+
+    def parse_rows(fields,rows,d):
+        if not fields or not rows: return None
+        code_idx=next((i for i,f in enumerate(fields) if "代號" in str(f)),None)
+        if code_idx is None: return None
+        for row in rows:
+            if code_idx<len(row) and str(row[code_idx]).strip()==code:
+                def val(words):
+                    for i,f in enumerate(fields):
+                        if all(w in str(f) for w in words) and i<len(row):
+                            try:
+                                s=str(row[i]).replace(",","").strip()
+                                if s not in ("","--","---","nan","None"): return float(s)/1000.0
+                            except Exception: pass
+                    return None
+                return {"date":d,"融資前日餘額":val(["融資","前日餘額"]),"融資今日餘額":val(["融資","今日餘額"]),
+                        "融券前日餘額":val(["融券","前日餘額"]),"融券今日餘額":val(["融券","今日餘額"])}
         return None
-    for days_back in range(0, 11):
-        d = (datetime.now() - pd.Timedelta(days=days_back)).strftime("%Y%m%d")
+
+    for days_back in range(11):
+        d=(datetime.now()-pd.Timedelta(days=days_back)).strftime("%Y%m%d")
+        url="https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN"
         try:
-            url = "https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN"
-            params = {"date": d, "selectType": "ALL", "response": "json"}
-            rr = requests.get(url, params=params, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
-            if rr.status_code != 200:
-                continue
-            data = rr.json()
-            for table in data.get("tables", []):
-                fields, rows = table.get("fields", []), table.get("data", [])
-                if not fields or not rows:
-                    continue
-                code_idx = next((i for i, f in enumerate(fields) if "代號" in str(f)), None)
-                if code_idx is None:
-                    continue
-                for row in rows:
-                    if code_idx < len(row) and str(row[code_idx]).strip() == code:
-                        def find_value(words):
-                            for i, f in enumerate(fields):
-                                if all(w in str(f) for w in words) and i < len(row):
-                                    try:
-                                        return float(str(row[i]).replace(",", "")) / 1000.0
-                                    except Exception:
-                                        pass
-                            return None
-                        return {
-                            "date": d,
-                            "融資前日餘額": find_value(["融資", "前日餘額"]),
-                            "融資今日餘額": find_value(["融資", "今日餘額"]),
-                            "融券前日餘額": find_value(["融券", "前日餘額"]),
-                            "融券今日餘額": find_value(["融券", "今日餘額"]),
-                        }
-        except Exception:
-            continue
+            rr=requests.get(url,params={"date":d,"selectType":"ALL","response":"json"},
+                            timeout=10,headers={"User-Agent":"Mozilla/5.0"})
+            if rr.status_code==200:
+                data=rr.json()
+                tables=list(data.get("tables",[]))
+                if data.get("fields") and data.get("data"):
+                    tables.append({"fields":data["fields"],"data":data["data"]})
+                for tb in tables:
+                    got=parse_rows(tb.get("fields",[]),tb.get("data",[]),d)
+                    if got: return got
+        except Exception: pass
+        try:
+            rr=requests.get(url,params={"date":d,"selectType":"ALL","response":"html"},
+                            timeout=10,headers={"User-Agent":"Mozilla/5.0"})
+            if rr.status_code==200:
+                for tb in pd.read_html(StringIO(rr.text)):
+                    tb=tb.dropna(how="all")
+                    if tb.empty: continue
+                    if isinstance(tb.columns,pd.MultiIndex):
+                        tb.columns=[" ".join(str(x) for x in c if str(x)!="nan").strip() for c in tb.columns]
+                    got=parse_rows([str(c) for c in tb.columns],tb.astype(str).values.tolist(),d)
+                    if got: return got
+        except Exception: pass
     return None
 
 
-@st.cache_data(ttl=300, show_spinner=False)
 def get_history(symbol, period="2y", interval="1d"):
     raw_s = str(symbol).strip().upper()
     candidates = []
@@ -818,7 +875,7 @@ def get_market_catalyst(symbol):
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V11.0")
+st.sidebar.title("⚙️ 33 專業操盤系統 V12.0")
 page = st.sidebar.radio(
     "功能模組",
     [
@@ -884,44 +941,39 @@ if page == "🔍 全市場個股深度分析 (量化評分+雙支撐雙壓力)":
         ch3.metric("三大法人合計", chips["三大法人合計"])
         ch4.metric("大戶持股變化", chips["大戶持股變化"])
         
-        st.info(f"💡 **信用籌碼狀態**：融資變化 `{chips['融資變化']}` | 融券變化 `{chips['融券變化']}` | 大戶持股：`{chips['大戶持股變化']}`")
+        chip_date = chips.get("_date") or "最新可得資料"
+        st.info(f"💡 **資料日期：{chip_date}**　融資變化 `{chips['融資變化']}` | 融券變化 `{chips['融券變化']}` | 大戶持股：`{chips['大戶持股變化']}`")
 
         st.markdown("---")
 
-        # 2. 多週期均線支撐與壓力
+        # 2. 多週期均線、雙支撐雙壓力與交易參考
         col_sr1, col_sr2 = st.columns(2)
         if sr:
             with col_sr1:
-                st.markdown("### 🎯 多週期均線防守點與買賣點")
-                st.markdown(f"""
-                <div class="trade-box">
-                    <b>🟢 專家建議進場點 (拉回低接)</b><br><span style="font-size: 22px; color: #38bdf8; font-weight: bold;">${sr['建議進場點']:,.2f}</span><br>
-                    <small>策略：貼近短線支撐分批佈局，嚴禁追高。</small>
-                </div>
-                <div class="trade-box" style="border-left-color: #f59e0b; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(180, 83, 9, 0.2) 100%);">
-                    <b>🎯 第一停利目標</b><br><span style="font-size: 22px; color: #f59e0b; font-weight: bold;">${sr['第一停利點']:,.2f}</span>
-                </div>
-                <div class="trade-box" style="border-left-color: #ef4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(153, 27, 27, 0.2) 100%);">
-                    <b>🛑 嚴格停損防守點</b><br><span style="font-size: 22px; color: #ef4444; font-weight: bold;">${sr['嚴格停損點']:,.2f}</span>
-                </div>
-                """, unsafe_allow_html=True)
-
+                st.markdown("### 🎯 第一/第二支撐與壓力")
+                m1,m2,m3,m4=st.columns(4)
+                m1.metric("第一支撐",f"{sr['第一支撐']:,.2f}")
+                m2.metric("第二支撐",f"{sr['第二支撐']:,.2f}")
+                m3.metric("第一壓力",f"{sr['第一壓力']:,.2f}")
+                m4.metric("第二壓力",f"{sr['第二壓力']:,.2f}")
+                st.markdown(f"**觀察進場區：** `{sr['建議觀察進場區']}`　**當沖停損：** `{sr['當沖停損參考']:,.2f}`　**隔日沖停損：** `{sr['隔日沖停損參考']:,.2f}`")
+                st.markdown(f"**第一目標：** `{sr['第一停利']:,.2f}`　**第二目標：** `{sr['第二停利']:,.2f}`")
             with col_sr2:
-                st.markdown("### 🛡️ 多週期均線防守區間")
-                st.markdown(f"""
-                <div class="support-box">
-                    <b>⚡ 5日線 (短線強弱分水嶺)</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['5日線(短線防守)']:,.2f}</span>
-                </div>
-                <div class="support-box">
-                    <b>🟢 20日線 (月線波段支撐)</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['20日線(月線支撐)']:,.2f}</span>
-                </div>
-                <div class="support-box">
-                    <b>🛡️ 60日線 (季線中期防守)</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['60日線(季線防守)']:,.2f}</span>
-                </div>
-                <div class="resistance-box">
-                    <b>🔴 120/240日線 (中長期多空趨勢)</b><br><span style="font-size: 18px; color: #f87171; font-weight: bold;">${sr['120/240日線(中長期趨勢)']:,.2f}</span>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown("### 📐 多週期技術數據")
+                tech_table=pd.DataFrame([
+                    ["MA5",sr["5日線"]],["MA20",sr["20日線"]],["MA60",sr["60日線"]],
+                    ["MA120",sr["120日線"]],["ATR14",sr["ATR14"]],["Pivot",sr["Pivot"]]
+                ],columns=["指標","數值"])
+                st.dataframe(tech_table,use_container_width=True,hide_index=True)
+
+        st.markdown("### 📊 量價與技術狀態")
+        tc1,tc2,tc3,tc4,tc5=st.columns(5)
+        tc1.metric("收盤價",f"{float(r['Close']):,.2f}")
+        tc2.metric("今日漲跌",f"{((float(r['Close'])/float(x['Close'].iloc[-2])-1)*100):+.2f}%")
+        tc3.metric("RSI14","—" if pd.isna(r["RSI14"]) else f"{float(r['RSI14']):.2f}")
+        tc4.metric("量比","—" if pd.isna(r["VolRatio"]) else f"{float(r['VolRatio']):.2f}x")
+        tc5.metric("ATR14","—" if pd.isna(r["ATR14"]) else f"{float(r['ATR14']):,.2f}")
+
 
         st.markdown("---")
 
