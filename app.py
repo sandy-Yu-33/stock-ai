@@ -17,14 +17,14 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V3.0",
+    page_title="33 專業操盤系統 V3.5 旗艦版",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # -----------------------------
-# Theme / constants & CSS
+# Theme / CSS
 # -----------------------------
 st.markdown("""
 <style>
@@ -53,12 +53,12 @@ st.markdown("""
     padding: 16px; border-radius: 10px; margin-bottom: 10px;
     border: 1px solid rgba(56, 189, 248, 0.3);
 }
-.news-card {
-    background: rgba(128, 128, 128, 0.06);
+.report-card {
+    background: rgba(128, 128, 128, 0.05);
     border: 1px solid rgba(128, 128, 128, 0.2);
-    padding: 14px 18px;
-    border-radius: 10px;
-    margin-bottom: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 15px;
 }
 .small-note {font-size: 0.82rem; opacity: .75;}
 </style>
@@ -66,44 +66,69 @@ st.markdown("""
 
 DEFAULT_WATCHLIST = [
     "2330.TW", "5274.TWO", "6669.TW", "0050.TW", "00878.TW",
-    "2317.TW", "2454.TW", "2382.TW", "3231.TW", "NVDA", "AAPL", "TSLA"
+    "2317.TW", "2454.TW", "NVDA", "AAPL", "TSLA", "7203.T", "005930.KS"
 ]
 
-ASSET_META = {
-    "2330.TW": {"name": "台積電", "div": "季配息", "desc": "全球晶圓代工龍頭，穩定季配息，現金流強健"},
-    "5274.TWO": {"name": "信驊", "div": "年配息", "desc": "全球伺服器遠端管理晶片（BMC）王"},
-    "6669.TW": {"name": "緯穎", "div": "年配息", "desc": "AI 伺服器與雲端資料中心大廠"},
-    "0050.TW": {"name": "元大台灣50", "div": "半年度配息", "desc": "追蹤臺灣50指數，涵蓋台股市值最大之50家企業"},
-    "0056.TW": {"name": "元大高股息", "div": "季配息", "desc": "台灣首檔高股息 ETF，採季配息機制"},
-    "00878.TW": {"name": "國泰永續高股息", "div": "季配息", "desc": "結合ESG與高股息篩選，深受存股族喜愛的季配息標的"},
-    "00919.TW": {"name": "群益台灣精選高息", "div": "季配息", "desc": "精選高填息與高股息個股，備受市場矚目的季配息ETF"},
-    "00929.TW": {"name": "復華台灣科技優息", "div": "月配息", "desc": "全台首檔台股科技月配息 ETF，提供頻繁現金流"},
-    "00940.TW": {"name": "元大臺灣價值高息", "div": "月配息", "desc": "巴菲特價值投資哲學結合月配息機制"},
-    "2317.TW": {"name": "鴻海", "div": "年配息", "desc": "全球電子代工巨頭與 AI 伺服器供應商"},
-    "2454.TW": {"name": "聯發科", "div": "半年度/年配息", "desc": "全球前五大無廠晶圓半導體公司"},
-    "2382.TW": {"name": "廣達", "div": "年配息", "desc": "筆電與 AI 伺服器代工大廠"},
-    "3231.TW": {"name": "緯創", "div": "年配息", "desc": "AI 伺服器與資訊硬體製造"},
-    "NVDA": {"name": "輝達 (NVIDIA)", "div": "季配息", "desc": "全球 AI 運算與繪圖晶片霸主"},
-    "AAPL": {"name": "蘋果 (Apple)", "div": "季配息", "desc": "消費性電子與軟體服務巨頭"},
-    "TSLA": {"name": "特斯拉 (Tesla)", "div": "不配息", "desc": "電動車與能源儲存創新領導者"},
-    "^TWII": {"name": "台灣加權指數", "div": "不適用", "desc": "台股大盤加權指數基準"},
-    "^SOX": {"name": "費城半導體指數", "div": "不適用", "desc": "全球半導體風向球"},
-    "^IXIC": {"name": "那斯達克指數", "div": "不適用", "desc": "美股科技股指標"},
-    "^GSPC": {"name": "標普500指數", "div": "不適用", "desc": "美股大盤基準"},
+# 擴充全球資產資料庫 (台、美、日、韓、ETF)
+GLOBAL_ASSET_DATABASE = {
+    # 台股
+    "2330.TW": {"name": "台積電", "div": "季配息", "market": "台股", "desc": "全球晶圓代工龍頭"},
+    "5274.TWO": {"name": "信驊", "div": "年配息", "market": "台股", "desc": "伺服器遠端管理晶片王"},
+    "6669.TW": {"name": "緯穎", "div": "年配息", "market": "台股", "desc": "AI 伺服器與資料中心"},
+    "2317.TW": {"name": "鴻海", "div": "年配息", "market": "台股", "desc": "全球電子代工巨頭"},
+    "2454.TW": {"name": "聯發科", "div": "半年度/年配息", "market": "台股", "desc": "全球IC設計大廠"},
+    "2603.TW": {"name": "長榮", "div": "年配息", "market": "台股", "desc": "全球貨櫃航運巨擘"},
+    "3231.TW": {"name": "緯創", "div": "年配息", "market": "台股", "desc": "AI 伺服器代工"},
+    "0050.TW": {"name": "元大台灣50", "div": "半年配", "market": "台股ETF", "desc": "追蹤臺灣50指數"},
+    "00878.TW": {"name": "國泰永續高股息", "div": "季配息", "market": "台股ETF", "desc": "熱門ESG高股息"},
+    "00919.TW": {"name": "群益台灣精選高息", "div": "季配息", "market": "台股ETF", "desc": "精選高息高填息"},
+    # 美股
+    "NVDA": {"name": "輝達 (NVIDIA)", "div": "季配息", "market": "美股", "desc": "全球 AI 運算晶片霸主"},
+    "AAPL": {"name": "蘋果 (Apple)", "div": "季配息", "market": "美股", "desc": "消費電子與軟體服務"},
+    "TSLA": {"name": "特斯拉 (Tesla)", "div": "不配息", "market": "美股", "desc": "電動車與能源轉型"},
+    "MSFT": {"name": "微軟 (Microsoft)", "div": "季配息", "market": "美股", "desc": "雲端與人工智慧巨頭"},
+    "QQQ": {"name": "那斯達克100 ETF", "div": "季配息", "market": "美股ETF", "desc": "追蹤美股百大科技股"},
+    "SPY": {"name": "標普500 ETF", "div": "季配息", "market": "美股ETF", "desc": "追蹤美國標普500大企業"},
+    # 日股
+    "7203.T": {"name": "豐田汽車 (Toyota)", "div": "半年配", "market": "日股", "desc": "全球汽車銷量龍頭"},
+    "6758.T": {"name": "索尼集團 (Sony)", "div": "半年配", "market": "日股", "desc": "娛樂、感測與科技巨頭"},
+    "9984.T": {"name": "軟銀集團 (SoftBank)", "div": "年配息", "market": "日股", "desc": "全球科技創投巨擘"},
+    # 韓股
+    "005930.KS": {"name": "三星電子 (Samsung)", "div": "季配息", "market": "韓股", "desc": "記憶體與智慧型手機霸主"},
+    "000660.KS": {"name": "SK海力士 (SK Hynix)", "div": "年配息", "market": "韓股", "desc": "HBM AI 記憶體領頭羊"},
+    # 指數
+    "^TWII": {"name": "台灣加權指數", "div": "不適用", "market": "指數", "desc": "台股大盤基準"},
+    "^N225": {"name": "日經225指數", "div": "不適用", "market": "指數", "desc": "日本東京日經指數"},
+    "^KS11": {"name": "韓國綜合指數", "div": "不適用", "market": "指數", "desc": "韓國KOSPI大盤"},
 }
 
-TW_SYMBOL_RE = re.compile(r"^\d{4,6}\.(TW|TWO)$", re.I)
+def normalize_symbol(s):
+    s = str(s).strip().upper()
+    if not s:
+        return ""
+    if s in GLOBAL_ASSET_DATABASE:
+        return s
+    # 數字自動補齊後綴
+    if s.isdigit():
+        if len(s) == 4 and s.startswith(("5", "4", "3", "6")):
+            return s + ".TWO"
+        elif len(s) == 5:
+            return s + ".TWO"
+        else:
+            return s + ".TW"
+    # 日股自動補 .T
+    if s.isdigit() and len(s) == 4:
+        return s + ".T"
+    return s
 
-# 智慧中文名稱動態解析引擎（自動從 Yahoo Finance 抓取並對應）
-@st.cache_data(ttl=3600, show_spinner=False)
 def display_name(symbol):
-    clean_sym = symbol.upper().strip()
-    if clean_sym in ASSET_META:
-        return ASSET_META[clean_sym]["name"]
-    # 嘗試不帶後綴或帶不同後綴尋找
-    base_num = clean_sym.split(".")[0]
-    for k, v in ASSET_META.items():
-        if k.startswith(base_num):
+    sym = normalize_symbol(symbol)
+    if sym in GLOBAL_ASSET_DATABASE:
+        return GLOBAL_ASSET_DATABASE[sym]["name"]
+    # 模糊比對
+    base = sym.split(".")[0]
+    for k, v in GLOBAL_ASSET_DATABASE.items():
+        if k.startswith(base):
             return v["name"]
     try:
         t = yf.Ticker(symbol)
@@ -115,66 +140,39 @@ def display_name(symbol):
         pass
     return symbol
 
-def get_div_info(symbol):
-    clean_sym = symbol.upper().strip()
-    if clean_sym in ASSET_META:
-        return ASSET_META[clean_sym]["div"], ASSET_META[clean_sym]["desc"]
-    base_num = clean_sym.split(".")[0]
-    for k, v in ASSET_META.items():
-        if k.startswith(base_num):
-            return v["div"], v["desc"]
-    return "依公司公告為準", "全球上市企業與金融商品"
-
-def is_taiwan(symbol):
-    return bool(TW_SYMBOL_RE.match(symbol)) or symbol.endswith((".TW", ".TWO"))
-
-def normalize_symbol(s):
-    s = str(s).strip().upper()
-    if not s:
-        return ""
-    if s.isdigit():
-        if len(s) == 4 and s.startswith(("5", "4", "3", "6")):
-            return s + ".TWO"
-        elif len(s) == 5:
-            return s + ".TWO"
-        else:
-            return s + ".TW"
-    return s
+def get_asset_meta(symbol):
+    sym = normalize_symbol(symbol)
+    if sym in GLOBAL_ASSET_DATABASE:
+        return GLOBAL_ASSET_DATABASE[sym]["div"], GLOBAL_ASSET_DATABASE[sym]["desc"], GLOBAL_ASSET_DATABASE[sym]["market"]
+    return "依公告為準", "全球金融資產", "跨國市場"
 
 # -----------------------------
-# 智慧強固型資料下載（自動容錯與重試）
+# 資料抓取與技術指標 (精準支撐壓力)
 # -----------------------------
 @st.cache_data(ttl=300, show_spinner=False)
 def get_history(symbol, period="1y", interval="1d"):
-    symbols_to_try = [symbol]
-    if symbol.isdigit():
-        symbols_to_try = [symbol + ".TW", symbol + ".TWO"]
-    elif symbol.endswith(".TW"):
-        symbols_to_try = [symbol, symbol.replace(".TW", ".TWO")]
-    elif symbol.endswith(".TWO"):
-        symbols_to_try = [symbol, symbol.replace(".TWO", ".TW")]
+    sym = normalize_symbol(symbol)
+    candidates = [sym]
+    if sym.isdigit():
+        candidates = [sym + ".TW", sym + ".TWO", sym + ".T"]
+    elif ".TW" in sym:
+        candidates = [sym, sym.replace(".TW", ".TWO")]
+    elif ".TWO" in sym:
+        candidates = [sym, sym.replace(".TWO", ".TW")]
 
-    for sym in symbols_to_try:
+    for s in candidates:
         try:
-            df = yf.download(
-                sym,
-                period=period,
-                interval=interval,
-                auto_adjust=False,
-                progress=False,
-                threads=False,
-            )
+            df = yf.download(s, period=period, interval=interval, auto_adjust=False, progress=False, threads=False)
             if df is not None and not df.empty:
                 if isinstance(df.columns, pd.MultiIndex):
                     try:
-                        df = df.xs(sym, axis=1, level=-1)
+                        df = df.xs(s, axis=1, level=-1)
                     except Exception:
                         df.columns = df.columns.get_level_values(0)
                 df = df.rename(columns=str.title)
                 needed = ["Open", "High", "Low", "Close", "Volume"]
                 if all(c in df.columns for c in needed):
-                    df = df[needed].copy()
-                    df = df.dropna(subset=["Close"])
+                    df = df[needed].dropna(subset=["Close"])
                     if not df.empty:
                         df.index = pd.to_datetime(df.index)
                         return df
@@ -184,54 +182,30 @@ def get_history(symbol, period="1y", interval="1d"):
 
 def add_indicators(df):
     x = df.copy()
-    close = x["Close"]
-    high = x["High"]
-    low = x["Low"]
-    volume = x["Volume"]
+    close, high, low, volume = x["Close"], x["High"], x["Low"], x["Volume"]
 
-    for n in [5, 10, 20, 60, 120, 240]:
+    for n in [5, 10, 20, 60]:
         x[f"MA{n}"] = close.rolling(n).mean()
 
     delta = close.diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
-    avg_gain = gain.ewm(alpha=1/14, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1/14, adjust=False).mean()
-    rs = avg_gain / avg_loss.replace(0, np.nan)
+    rs = gain.ewm(alpha=1/14, adjust=False).mean() / loss.ewm(alpha=1/14, adjust=False).mean().replace(0, np.nan)
     x["RSI14"] = 100 - (100 / (1 + rs))
 
-    ema12 = close.ewm(span=12, adjust=False).mean()
-    ema26 = close.ewm(span=26, adjust=False).mean()
-    x["MACD"] = ema12 - ema26
-    x["MACDSignal"] = x["MACD"].ewm(span=9, adjust=False).mean()
-    x["MACDHist"] = x["MACD"] - x["MACDSignal"]
-
-    tr = pd.concat([
-        high - low,
-        (high - close.shift()).abs(),
-        (low - close.shift()).abs()
-    ], axis=1).max(axis=1)
+    tr = pd.concat([high - low, (high - close.shift()).abs(), (low - close.shift()).abs()], axis=1).max(axis=1)
     x["ATR14"] = tr.rolling(14).mean()
 
     mid = close.rolling(20).mean()
     std = close.rolling(20).std()
-    x["BBMid"] = mid
-    x["BBUpper"] = mid + 2 * std
     x["BBLower"] = mid - 2 * std
+    x["BBUpper"] = mid + 2 * std
 
     x["VolMA20"] = volume.rolling(20).mean()
     x["VolRatio"] = volume / x["VolMA20"].replace(0, np.nan)
-
     x["High20"] = high.rolling(20).max()
     x["Low20"] = low.rolling(20).min()
-    x["High60"] = high.rolling(60).max()
-    x["Low60"] = low.rolling(60).min()
-
     x["Return1D"] = close.pct_change()
-    x["Return5D"] = close.pct_change(5)
-    x["Return20D"] = close.pct_change(20)
-    x["Volatility20"] = x["Return1D"].rolling(20).std() * np.sqrt(252)
-
     return x
 
 def calculate_support_resistance(df):
@@ -240,440 +214,198 @@ def calculate_support_resistance(df):
     x = add_indicators(df)
     r = x.iloc[-1]
     price = float(r["Close"])
-    
+    atr = float(r["ATR14"]) if pd.notna(r["ATR14"]) else price * 0.025
+
     ma20 = float(r["MA20"]) if pd.notna(r["MA20"]) else price * 0.98
     ma60 = float(r["MA60"]) if pd.notna(r["MA60"]) else price * 0.95
-    bb_lower = float(r["BBLower"]) if pd.notna(r["BBLower"]) else price * 0.97
-    bb_upper = float(r["BBUpper"]) if pd.notna(r["BBUpper"]) else price * 1.03
-    high20 = float(r["High20"]) if pd.notna(r["High20"]) else price * 1.02
     low20 = float(r["Low20"]) if pd.notna(r["Low20"]) else price * 0.96
+    high20 = float(r["High20"]) if pd.notna(r["High20"]) else price * 1.04
 
-    sup_1 = max(ma20, bb_lower, low20)
-    sup_2 = min(ma60, sup_1 * 0.96)
-    res_1 = max(bb_upper, high20)
-    res_2 = res_1 * 1.035
+    # 更嚴謹的支撐與壓力點位公式
+    sup_1 = round(max(ma20 * 0.99, low20, price - atr), 2)
+    sup_2 = round(min(ma60, sup_1 - atr * 1.5), 2)
+    res_1 = round(min(high20 * 1.01, price + atr * 1.2), 2)
+    res_2 = round(res_1 + atr * 1.8, 2)
 
-    entry_price = price * 0.995
+    entry = round(sup_1 * 1.002, 2)
+    stop_loss = round(sup_2 - atr * 0.5, 2)
     tp_1 = res_1
     tp_2 = res_2
-    stop_loss = sup_2 * 0.985
 
     return {
-        "現價": price,
+        "現價": round(price, 2),
         "第一支撐": sup_1,
         "第二支撐": sup_2,
         "第一壓力": res_1,
         "第二壓力": res_2,
-        "建議進場點": entry_price,
-        "第一賣出點": tp_1,
-        "第二賣出點": tp_2,
+        "建議進場點": entry,
+        "第一停利點": tp_1,
+        "第二停利點": tp_2,
         "嚴格停損點": stop_loss,
     }
 
-def clamp(v, lo=0, hi=100):
-    return max(lo, min(hi, float(v)))
-
-def score_asset(df):
-    if df.empty or len(df) < 80:
-        return {
-            "score": np.nan, "trend": np.nan, "momentum": np.nan,
-            "volume": np.nan, "breakout": np.nan, "risk": np.nan,
-            "signal": "資料不足"
-        }
-
-    x = add_indicators(df)
-    r = x.iloc[-1]
-
-    trend = 50
-    if pd.notna(r["MA5"]) and pd.notna(r["MA20"]):
-        trend += 15 if r["MA5"] > r["MA20"] else -15
-    if pd.notna(r["MA20"]) and pd.notna(r["MA60"]):
-        trend += 15 if r["MA20"] > r["MA60"] else -15
-    if pd.notna(r["MA60"]):
-        trend += 10 if r["Close"] > r["MA60"] else -10
-    trend = clamp(trend)
-
-    momentum = 50
-    if pd.notna(r["RSI14"]):
-        momentum += np.clip((r["RSI14"] - 50) * 1.0, -25, 25)
-    if pd.notna(r["MACDHist"]):
-        momentum += 15 if r["MACDHist"] > 0 else -15
-    momentum = clamp(momentum)
-
-    volume = 50
-    if pd.notna(r["VolRatio"]):
-        volume += np.clip((r["VolRatio"] - 1) * 30, -25, 35)
-    volume = clamp(volume)
-
-    breakout = 50
-    if len(x) >= 21:
-        prev_high20 = x["High20"].iloc[-2]
-        prev_low20 = x["Low20"].iloc[-2]
-        if pd.notna(prev_high20) and r["Close"] > prev_high20:
-            breakout += 35
-        elif pd.notna(prev_low20) and r["Close"] < prev_low20:
-            breakout -= 35
-    breakout = clamp(breakout)
-
-    risk = 70
-    if pd.notna(r["Volatility20"]):
-        risk -= np.clip((r["Volatility20"] - 0.30) * 80, -10, 35)
-    if pd.notna(r["ATR14"]) and r["Close"] > 0:
-        atr_pct = r["ATR14"] / r["Close"]
-        risk -= np.clip((atr_pct - 0.025) * 250, -10, 30)
-    risk = clamp(risk)
-
-    total = (
-        trend * 0.30 +
-        momentum * 0.22 +
-        volume * 0.13 +
-        breakout * 0.20 +
-        risk * 0.15
-    )
-    total = round(clamp(total), 1)
-
-    if total >= 75:
-        signal = "偏多"
-    elif total >= 60:
-        signal = "中性偏多"
-    elif total >= 45:
-        signal = "觀察"
-    elif total >= 30:
-        signal = "中性偏空"
-    else:
-        signal = "偏空"
-
-    return {
-        "score": total,
-        "trend": round(trend, 1),
-        "momentum": round(momentum, 1),
-        "volume": round(volume, 1),
-        "breakout": round(breakout, 1),
-        "risk": round(risk, 1),
-        "signal": signal,
-        "rsi": r["RSI14"],
-        "macd_hist": r["MACDHist"],
-        "vol_ratio": r["VolRatio"],
-    }
-
-@st.cache_data(ttl=300, show_spinner=False)
-def market_regime():
-    symbols = ["^TWII", "^SOX", "^IXIC", "^GSPC"]
-    rows = []
-    for s in symbols:
-        df = get_history(s, "6mo")
-        if df.empty:
-            continue
-        x = add_indicators(df)
-        r = x.iloc[-1]
-        above20 = bool(pd.notna(r["MA20"]) and r["Close"] > r["MA20"])
-        above60 = bool(pd.notna(r["MA60"]) and r["Close"] > r["MA60"])
-        ret20 = r["Return20D"]
-        rows.append({
-            "市場": display_name(s),
-            "代碼": s,
-            "收盤": r["Close"],
-            "20日報酬": ret20,
-            "MA20上方": above20,
-            "MA60上方": above60,
-            "資料日": x.index[-1].date()
-        })
-    out = pd.DataFrame(rows)
-    if out.empty:
-        return out, "資料不足"
-    positive = int((out["MA20上方"] & out["MA60上方"]).sum())
-    negative = int((~out["MA20上方"] & ~out["MA60上方"]).sum())
-    if positive >= 3:
-        regime = "偏多環境"
-    elif negative >= 3:
-        regime = "偏空環境"
-    else:
-        regime = "震盪／分化"
-    return out, regime
-
-@st.cache_data(ttl=900, show_spinner=False)
-def get_twse_institutional(symbol, date_str=None):
-    if requests is None or not symbol.endswith((".TW", ".TWO")):
-        return None
-
-    code = symbol.split(".")[0]
-    if date_str is None:
-        date_str = datetime.now().strftime("%Y%m%d")
-
-    url = "https://www.twse.com.tw/rwd/zh/fund/T86"
-    params = {
-        "date": date_str,
-        "selectType": "ALLBUT0999",
-        "response": "json",
-    }
-    try:
-        r = requests.get(
-            url, params=params, timeout=8,
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
-        if r.status_code != 200:
-            return None
-        data = r.json()
-        rows = data.get("data", [])
-        for row in rows:
-            if not row:
-                continue
-            if str(row[0]).strip() == code:
-                fields = data.get("fields", [])
-                mapping = {str(f).strip(): i for i, f in enumerate(fields)}
-                def find_col(words):
-                    for k, idx in mapping.items():
-                        if all(w in k for w in words):
-                            return idx
-                    return None
-                f_idx = find_col(["外陸資", "買賣超股數"])
-                it_idx = find_col(["投信", "買賣超股數"])
-                d_idx = find_col(["自營商", "買賣超股數"])
-                result = {"date": date_str, "symbol": symbol}
-                for key, idx in [("foreign", f_idx), ("trust", it_idx), ("dealer", d_idx)]:
-                    result[key] = None
-                    if idx is not None and idx < len(row):
-                        val = str(row[idx]).replace(",", "").replace(" ", "")
-                        try:
-                            result[key] = float(val)
-                        except Exception:
-                            pass
-                if any(result[k] is not None for k in ["foreign", "trust", "dealer"]):
-                    result["total"] = sum(
-                        result[k] or 0 for k in ["foreign", "trust", "dealer"]
-                    )
-                    return result
-    except Exception:
-        return None
-    return None
-
-def institutional_history(symbol, days=5):
-    if not is_taiwan(symbol):
-        return pd.DataFrame()
-    rows = []
-    today = datetime.now()
-    for i in range(days + 7):
-        d = today - timedelta(days=i)
-        if d.weekday() >= 5:
-            continue
-        rec = get_twse_institutional(symbol, d.strftime("%Y%m%d"))
-        if rec:
-            rows.append(rec)
-        if len(rows) >= days:
-            break
-    if not rows:
-        return pd.DataFrame()
-    return pd.DataFrame(rows).sort_values("date")
-
 # -----------------------------
-# Sidebar
+# 導航選單 (Sidebar)
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V3.0")
+st.sidebar.title("⚙️ 33 專業操盤系統 V3.5")
 page = st.sidebar.radio(
     "功能模組",
     [
-        "📰 每日即時新聞與盤勢",
-        "🕒 台股 13:00 隔日沖雷達",
-        "⏰ 美股 04:00 當日當沖雷達",
-        "🏠 總覽",
-        "🤖 AI 量化選股",
-        "🔍 個股深度分析 (支撐壓力/買賣點)",
-        "🎯 交易計畫與風控",
-        "🧪 策略回測實驗室",
-        "🛡️ 投資組合風險",
-        "📒 交易日誌",
+        "📰 今日財經早報與全球大小事",
+        "🕒 13:00 台股隔日沖雷達",
+        "⏰ 04:00 美股當日當沖雷達",
+        "🌏 美日韓全球股市評估",
+        "🔍 個股深度分析 (精準支撐壓力/買賣點)",
+        "🏠 總覽與自選監控",
     ],
 )
 
 st.sidebar.divider()
-capital = st.sidebar.number_input("交易資金", min_value=0.0, value=300000.0, step=10000.0)
-risk_pct = st.sidebar.number_input("單筆最大風險 %", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
+capital = st.sidebar.number_input("操盤資金水位", min_value=0.0, value=500000.0, step=50000.0)
 
-st.sidebar.markdown("### 📋 自選股管理")
-st.sidebar.caption("支援直接輸入純數字（例：2330, 5274, 2603）或美股代號。")
+st.sidebar.markdown("### 📋 自選股清單")
 watch_text = st.sidebar.text_area(
-    "輸入自選代號（逗號、空格或換行）",
+    "輸入代號 (支援台、美、日、韓)",
     value=",".join(DEFAULT_WATCHLIST),
-    height=110
+    height=100
 )
-watchlist = []
-for s in re.split(r"[,\n\s]+", watch_text):
-    s = normalize_symbol(s)
-    if s and s not in watchlist:
-        watchlist.append(s)
-
-st.sidebar.caption("資料來源：Yahoo Finance 萬用智慧通道。")
+watchlist = [normalize_symbol(s) for s in re.split(r"[,\n\s]+", watch_text) if s.strip()]
 
 # -----------------------------
-# Page: Daily News & Market Pulse
+# Page 1: Daily Morning Report (財經早報)
 # -----------------------------
-if page == "📰 每日即時新聞與盤勢":
-    st.title("📰 每日即時新聞與股市大小事")
-    st.markdown(f"**更新日期**：`{datetime.now().strftime('%Y-%m-%d')}` | 即時掌握全球金融市場與台股動態脈動。")
+if page == "📰 今日財經早報與全球大小事":
+    st.title("📰 專業操盤手今日財經早報")
+    st.markdown(f"**發布日期**：`{datetime.now().strftime('%Y-%m-%d')}` | 掌握美、日、韓與台股關鍵大小事與資金動向。")
 
-    st.subheader("🔥 今日財經頭條與市場焦點")
     st.markdown("""
-    <div class="news-card">
-        <h4>🚀 台股量能突破兆元站穩大關！電子權值與記憶體族群強勢領軍</h4>
-        <p class="small-note">發布時間：今日盤勢總結 | 來源：財經通訊</p>
-        <p>台股本周延續強勢格局，大盤指數亮眼收高。晶圓代工雙雄台積電（2330）、聯電（2303）帶頭上攻，配合記憶體族群與高價千金股全面引爆，市場成交量再度重回新台幣 1 兆元以上。</p>
+    <div class="report-card">
+        <h3>🇺🇸 美股要聞：科技股財報前夕觀望，聯準會利率路徑成焦點</h3>
+        <p>美股四大指數近期維持高檔震盪。AI 晶片與半導體供應鏈（如輝達、超微）依然是多方資金核心，市場聚焦最新通膨數據與企業資本支出。建議短線操作嚴守技術支撐，避免追高。</p>
     </div>
-    <div class="news-card">
-        <h4>⚡ 國際半導體與 AI 供應鏈最新動態：輝達 (NVDA) 需求持續強勁</h4>
-        <p class="small-note">發布時間：國際財經 | 來源：Wall Street 觀察</p>
-        <p>美股主要指數同步走揚。AI 晶片龍頭輝達（NVDA）拉貨動能不減，台灣相關伺服器代工（廣達、緯穎、鴻海）與散熱供應鏈後市持續備受法人關注。</p>
+    <div class="report-card">
+        <h3>🇯🇵 日股要聞：企業改革效應延續，日經指數受匯率波動影響</h3>
+        <p>日本企業持續強化公司治理與庫藏股買回政策，吸引外資持續目光。豐田汽車（7203.T）等出口導向企業受日圓匯率牽動大，為亞洲市場重要的觀察指標。</p>
+    </div>
+    <div class="report-card">
+        <h3>🇰🇷 韓股要聞：HBM 記憶體需求強勁，三星與海力士領軍反彈</h3>
+        <p>受惠於全球 AI 伺服器對高頻寬記憶體（HBM）的龐大需求，韓國半導體雙雄（三星電子、SK海力士）近期成交量顯著放大，帶動韓股技術面翻多。</p>
+    </div>
+    <div class="report-card">
+        <h3>🇹🇼 台股要聞：權值股領軍挑戰新高，量能重回億級水準</h3>
+        <p>台積電（2330.TW）與 AI 概念股穩健盤堅，中小型股輪動快速。盤中逢拉回至月線附近為極佳的布局時機，當沖與隔日沖操作空間熱絡。</p>
     </div>
     """, unsafe_allow_html=True)
 
-    st.subheader("🌍 全球主要指數即時走勢速覽")
-    regime_df, regime = market_regime()
-    if not regime_df.empty:
-        show = regime_df.copy()
-        show["20日報酬"] = show["20日報酬"].map(lambda v: f"{v*100:.2f}%" if pd.notna(v) else "—")
-        show["收盤"] = show["收盤"].map(lambda v: f"{v:,.2f}")
-        st.dataframe(show, use_container_width=True, hide_index=True)
+# -----------------------------
+# Page 2: Taiwan 13:00 Overnight Scanner (台股 13:00 隔日沖)
+# -----------------------------
+elif page == "🕒 13:00 台股隔日沖雷達":
+    st.title("🕒 13:00 台股收盤前隔日沖強勢股雷達")
+    st.markdown("專為台股下午 1 點過後設計：自動篩選出今日帶量鎖碼、買盤強勁、具備極高隔日開高機率之標的。")
 
-# -----------------------------
-# Page: Taiwan 13:00 Overnight Scanner
-# -----------------------------
-elif page == "🕒 台股 13:00 隔日沖雷達":
-    st.title("🕒 台股 13:00 後隔日沖強勢股雷達")
-    tw_pool = ["2330.TW", "5274.TWO", "6669.TW", "2454.TW", "2317.TW", "2603.TW", "3231.TW", "3017.TW", "3008.TW", "3661.TWO"]
-    
+    tw_pool = ["2330.TW", "5274.TWO", "6669.TW", "2454.TW", "2317.TW", "2603.TW", "3231.TW", "3017.TW", "3008.TW"]
     rows = []
     for sym in tw_pool:
         df = get_history(sym, "5d")
-        if not df.empty:
+        if not df.empty and len(df) >= 2:
             c_p = float(df["Close"].iloc[-1])
             p_p = float(df["Close"].iloc[-2])
             chg = ((c_p - p_p) / p_p) * 100
+            vol_ratio = float(df["Volume"].iloc[-1] / df["Volume"].rolling(5).mean().iloc[-1]) if pd.notna(df["Volume"].rolling(5).mean().iloc[-1]) else 1.0
             sr = calculate_support_resistance(df)
-            if sr and chg > 1.0:
+            
+            if sr and chg > 1.2 and vol_ratio > 1.1:
                 rows.append({
                     "代碼": sym,
-                    "名稱": display_name(sym),
+                    "中文名稱": display_name(sym),
                     "收盤現價": f"${c_p:,.2f}",
                     "今日漲幅": f"{chg:+.2f}%",
+                    "量比": f"{vol_ratio:.2f}x",
                     "隔日參考買進": f"${c_p:,.2f}",
-                    "隔日停利目標": f"${sr['第一壓力']:,.2f}",
-                    "嚴格防守停損": f"${sr['第一支撐']:,.2f}",
+                    "第一停利點": f"${sr['第一壓力']:,.2f}",
+                    "嚴格停損點": f"${sr['第一支撐']:,.2f}",
+                    "隔日沖評級": "🔥 強勢鎖碼 (高勝率)" if chg > 3.0 else "⚡ 帶量續強 (中勝率)"
                 })
+
     if rows:
+        st.success(f"成功篩選出 {len(rows)} 檔符合 13:00 隔日沖條件的強勢標的！")
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     else:
-        st.info("目前無符合條件之隔日沖標的。")
+        st.warning("今日 13:00 盤勢較為收斂，暫無符合高勝率標準的隔日沖標的。")
 
 # -----------------------------
-# Page: US 04:00 Intraday Scanner
+# Page 3: US 04:00 Intraday Scanner (美股 04:00 當沖)
 # -----------------------------
-elif page == "⏰ 美股 04:00 當日當沖雷達":
-    st.title("⏰ 美股 04:00 收盤後當日當沖雷達")
-    us_pool = ["NVDA", "AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "META", "QQQ", "SPY", "SOXL"]
-    
+elif page == "⏰ 04:00 美股當日當沖雷達":
+    st.title("⏰ 04:00 美國股市收盤當日當沖雷達")
+    st.markdown("專為美股收盤後（清晨 04:00）與盤前設計：篩選波動率大、成交活躍、適合當日進行極速當沖的美股與 ETF。")
+
+    us_pool = ["NVDA", "AAPL", "TSLA", "MSFT", "GOOGL", "AMZN", "META", "QQQ", "SPY"]
     rows = []
     for sym in us_pool:
         df = get_history(sym, "5d")
-        if not df.empty:
+        if not df.empty and len(df) >= 2:
             c_p = float(df["Close"].iloc[-1])
             p_p = float(df["Close"].iloc[-2])
             chg = ((c_p - p_p) / p_p) * 100
             sr = calculate_support_resistance(df)
+            
             if sr and abs(chg) > 1.5:
                 rows.append({
                     "代碼": sym,
-                    "名稱": display_name(sym),
+                    "中文名稱": display_name(sym),
                     "收盤價": f"${c_p:,.2f}",
                     "漲跌幅": f"{chg:+.2f}%",
                     "建議當沖進場": f"${sr['建議進場點']:,.2f}",
-                    "當沖短線停利": f"${sr['第一壓力']:,.2f}",
-                    "當沖嚴格停損": f"${sr['嚴格停損點']:,.2f}",
+                    "短線停利": f"${sr['第一壓力']:,.2f}",
+                    "嚴格停損": f"${sr['嚴格停損點']:,.2f}",
+                    "當沖方向": "🚀 突破追多" if chg > 0 else "🔻 反彈做空"
                 })
+
     if rows:
+        st.success(f"成功篩選出 {len(rows)} 檔美股當沖熱門標的！")
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
     else:
-        st.info("目前無符合條件之美股當沖標的。")
+        st.warning("今日美股波動率較平緩，建議等待開盤量能表態。")
 
 # -----------------------------
-# Page: Overview
+# Page 4: Global Markets (美日韓全球股市評估)
 # -----------------------------
-elif page == "🏠 總覽":
-    st.title("📈 33 專業操盤系統 V3.0")
-    regime_df, regime = market_regime()
-    c1, c2, c3 = st.columns(3)
-    c1.metric("市場宏觀環境", regime)
-    c2.metric("追蹤自選數量", len(watchlist))
-    c3.metric("風險配置", f"{risk_pct:.1f}% / 筆")
+elif page == "🌏 美日韓全球股市評估":
+    st.title("🌏 美國、日本、韓國跨國股市與指數評估")
+    st.markdown("完整評估美股、日股、韓股代表性指數與個股的技術結構、支撐壓力與多空動能。")
 
-    if not regime_df.empty:
-        st.subheader("🌏 全球指數與大盤風向")
-        show = regime_df.copy()
-        show["市場"] = show["代碼"].apply(display_name)
-        show["20日報酬"] = show["20日報酬"].map(lambda v: f"{v*100:.2f}%" if pd.notna(v) else "—")
-        show["收盤"] = show["收盤"].map(lambda v: f"{v:,.2f}")
-        st.dataframe(show, use_container_width=True, hide_index=True)
-
-    st.subheader("📊 自選股即時量化快照")
+    global_pool = ["NVDA", "AAPL", "7203.T", "6758.T", "005930.KS", "000660.KS", "^N225", "^KS11"]
     rows = []
-    for sym in watchlist:
-        df = get_history(sym, "1y")
-        sc = score_asset(df)
-        div_freq, _ = get_div_info(sym)
-        if df.empty:
-            rows.append({"代碼": sym, "名稱": display_name(sym), "狀態": "無資料"})
-            continue
-        x = add_indicators(df)
-        r = x.iloc[-1]
-        rows.append({
-            "代碼": sym,
-            "名稱": display_name(sym),
-            "配息機制": div_freq,
-            "收盤價": r["Close"],
-            "日漲跌幅": r["Return1D"],
-            "RSI": r["RSI14"],
-            "量比": r["VolRatio"],
-            "量化得分": sc["score"],
-            "技術訊號": sc["signal"],
-        })
-    snap = pd.DataFrame(rows)
-    if not snap.empty:
-        for col in ["收盤價", "RSI", "量比", "量化得分"]:
-            if col in snap.columns:
-                snap[col] = snap[col].round(2)
-        if "日漲跌幅" in snap.columns:
-            snap["日漲跌幅"] = snap["日漲跌幅"].map(lambda v: f"{v*100:+.2f}%" if pd.notna(v) else "—")
-        st.dataframe(snap, use_container_width=True, hide_index=True)
-
-# -----------------------------
-# Page: AI Quant Scanner
-# -----------------------------
-elif page == "🤖 AI 量化選股":
-    st.title("🤖 AI 智能量化選股排行榜")
-    rows = []
-    for sym in watchlist:
-        df = get_history(sym, "1y")
-        sc = score_asset(df)
-        div_freq, _ = get_div_info(sym)
+    for sym in global_pool:
+        df = get_history(sym, "6mo")
         if not df.empty:
             r = df.iloc[-1]
+            close = float(r["Close"])
+            div, desc, mkt = get_asset_meta(sym)
+            sr = calculate_support_resistance(df)
             rows.append({
+                "市場": mkt,
                 "代碼": sym,
-                "名稱": display_name(sym),
-                "配息頻率": div_freq,
-                "收盤": r["Close"],
-                "總分": sc["score"],
-                "訊號": sc["signal"],
+                "中文名稱": display_name(sym),
+                "產業/屬性": desc,
+                "最新收盤": round(close, 2),
+                "第一支撐": sr["第一支撐"] if sr else "—",
+                "第一壓力": sr["第一壓力"] if sr else "—",
+                "股利政策": div,
             })
-    df_rank = pd.DataFrame(rows)
-    if not df_rank.empty:
-        df_rank = df_rank.sort_values("總分", ascending=False)
-        st.dataframe(df_rank.style.format({"收盤": "{:,.2f}", "總分": "{:.1f}"}), use_container_width=True, hide_index=True)
+    
+    global_df = pd.DataFrame(rows)
+    if not global_df.empty:
+        st.dataframe(global_df, use_container_width=True, hide_index=True)
 
 # -----------------------------
-# Page: Deep Analysis
+# Page 5: Deep Analysis (個股深度分析)
 # -----------------------------
-elif page == "🔍 個股深度分析 (支撐壓力/買賣點)":
+elif page == "🔍 個股深度分析 (精準支撐壓力/買賣點)":
     st.title("🔍 個股深度分析與精準操盤點位")
-    manual_input = st.text_input("輸入任意全球代號（例: 2330, 5274, 2603, NVDA, 00878）", value="2330")
+    manual_input = st.text_input("輸入代號 (支援台、美、日、韓，例: 2330, NVDA, 7203.T, 005930.KS)", value="2330.TW")
     target_symbol = normalize_symbol(manual_input) if manual_input else "2330.TW"
 
     df = get_history(target_symbol, "2y")
@@ -682,52 +414,54 @@ elif page == "🔍 個股深度分析 (支撐壓力/買賣點)":
     else:
         x = add_indicators(df)
         r = x.iloc[-1]
-        sc = score_asset(df)
         d_name = display_name(target_symbol)
-        div_freq, div_desc = get_div_info(target_symbol)
+        div_freq, div_desc, market_type = get_asset_meta(target_symbol)
         sr = calculate_support_resistance(df)
 
-        st.markdown(f"## 📌 {d_name} (`{target_symbol}`) 操盤總覽")
-        st.markdown(f"🏢 **產業與配息**：`{div_freq}` — {div_desc}")
+        st.markdown(f"## 📌 [{market_type}] {d_name} (`{target_symbol}`) 操盤總覽")
+        st.markdown(f"🏢 **資產屬性與配息**：`{div_freq}` — {div_desc}")
 
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("收盤價", f"${r['Close']:,.2f}")
-        c2.metric("量化總分", f"{sc['score']:.1f}")
-        c3.metric("RSI (14)", f"{r['RSI14']:.1f}")
-        c4.metric("量比", f"{r['VolRatio']:.2f}x")
-        c5.metric("訊號", sc["signal"])
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("最新收盤價", f"${r['Close']:,.2f}")
+        c2.metric("RSI (14)", f"{r['RSI14']:.1f}" if pd.notna(r['RSI14']) else "—")
+        c3.metric("成交量比", f"{r['VolRatio']:.2f}x" if pd.notna(r['VolRatio']) else "—")
+        c4.metric("ATR 波動值", f"{r['ATR14']:,.2f}" if pd.notna(r['ATR14']) else "—")
 
         st.markdown("---")
         col_sr1, col_sr2 = st.columns(2)
         if sr:
             with col_sr1:
-                st.markdown("### 🎯 精準進場與賣出點")
+                st.markdown("### 🎯 精準進場與買賣點位")
                 st.markdown(f"""
                 <div class="trade-box">
-                    <b>🟢 建議進場買進點</b><br><span style="font-size: 20px; color: #38bdf8; font-weight: bold;">${sr['建議進場點']:,.2f}</span>
+                    <b>🟢 建議進場買進點</b><br><span style="font-size: 22px; color: #38bdf8; font-weight: bold;">${sr['建議進場點']:,.2f}</span><br>
+                    <small>策略：拉回第一支撐附近分批低接。</small>
                 </div>
                 <div class="trade-box" style="border-left-color: #f59e0b; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(180, 83, 9, 0.2) 100%);">
-                    <b>🎯 第一賣出點 (停利)</b><br><span style="font-size: 20px; color: #f59e0b; font-weight: bold;">${sr['第一賣出點']:,.2f}</span>
+                    <b>🎯 第一停利點 (目標 1)</b><br><span style="font-size: 22px; color: #f59e0b; font-weight: bold;">${sr['第一停利點']:,.2f}</span>
+                </div>
+                <div class="trade-box" style="border-left-color: #a855f7; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(107, 33, 168, 0.2) 100%);">
+                    <b>🚀 第二停利點 (波段目標 2)</b><br><span style="font-size: 22px; color: #a855f7; font-weight: bold;">${sr['第二停利點']:,.2f}</span>
                 </div>
                 <div class="trade-box" style="border-left-color: #ef4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(153, 27, 27, 0.2) 100%);">
-                    <b>🛑 嚴格停損防守</b><br><span style="font-size: 20px; color: #ef4444; font-weight: bold;">${sr['嚴格停損點']:,.2f}</span>
+                    <b>🛑 嚴格停損防守點</b><br><span style="font-size: 22px; color: #ef4444; font-weight: bold;">${sr['嚴格停損點']:,.2f}</span>
                 </div>
                 """, unsafe_allow_html=True)
 
             with col_sr2:
-                st.markdown("### 🛡️ 專業支撐與壓力")
+                st.markdown("### 🛡️ 專業支撐與壓力計算")
                 st.markdown(f"""
                 <div class="support-box">
-                    <b>🟢 第一支撐</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['第一支撐']:,.2f}</span>
+                    <b>🟢 第一支撐 (近端防守區)</b><br><span style="font-size: 20px; color: #34d399; font-weight: bold;">${sr['第一支撐']:,.2f}</span>
                 </div>
                 <div class="support-box">
-                    <b>🟢 第二支撐</b><br><span style="font-size: 18px; color: #34d399; font-weight: bold;">${sr['第二支撐']:,.2f}</span>
+                    <b>🟢 第二支撐 (強力防守區)</b><br><span style="font-size: 20px; color: #34d399; font-weight: bold;">${sr['第二支撐']:,.2f}</span>
                 </div>
                 <div class="resistance-box">
-                    <b>🔴 第一壓力</b><br><span style="font-size: 18px; color: #f87171; font-weight: bold;">${sr['第一壓力']:,.2f}</span>
+                    <b>🔴 第一壓力 (解套賣壓區)</b><br><span style="font-size: 20px; color: #f87171; font-weight: bold;">${sr['第一壓力']:,.2f}</span>
                 </div>
-                <div class="resistance-box">
-                    <b>🔴 第二壓力</b><br><span style="font-size: 18px; color: #f43f5e; font-weight: bold;">${sr['第二壓力']:,.2f}</span>
+                <div class="resistance-box" style="border-left-color: #f43f5e;">
+                    <b>🔴 第二壓力 (波段極限區)</b><br><span style="font-size: 20px; color: #f43f5e; font-weight: bold;">${sr['第二壓力']:,.2f}</span>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -735,37 +469,32 @@ elif page == "🔍 個股深度分析 (支撐壓力/買賣點)":
         st.line_chart(x[["Close", "MA20", "MA60"]].dropna(how="all"))
 
 # -----------------------------
-# Page: Trade Plan
+# Page 6: Overview (總覽與自選)
 # -----------------------------
-elif page == "🎯 交易計畫與風控":
-    st.title("🎯 自動交易計畫與部位大小計算")
-    plan_sym = normalize_symbol(st.text_input("輸入代號", value="2330"))
-    df = get_history(plan_sym, "2y")
-    sr = calculate_support_resistance(df)
-    if sr:
-        st.metric("現價", f"${sr['現價']:,.2f}")
-        st.metric("停損點", f"${sr['嚴格停損點']:,.2f}")
+elif page == "🏠 總覽與自選監控":
+    st.title("📈 33 專業操盤系統 V3.5 總覽")
+    st.markdown("追蹤您自選清單中的所有全球資產即時報價、中文名稱與技術架構。")
 
-# -----------------------------
-# Page: Backtest
-# -----------------------------
-elif page == "🧪 策略回測實驗室":
-    st.title("🧪 策略回測實驗室")
-    st.line_chart(get_history("2330.TW", "1y")["Close"])
-
-# -----------------------------
-# Page: Portfolio Risk
-# -----------------------------
-elif page == "🛡️ 投資組合風險":
-    st.title("🛡️ 投資組合風險管理")
-    st.data_editor(pd.DataFrame([{"代碼": "2330.TW", "數量": 1000, "成本": 900.0}]), num_rows="dynamic")
-
-# -----------------------------
-# Page: Journal
-# -----------------------------
-elif page == "📒 交易日誌":
-    st.title("📒 交易日誌分析")
-    st.file_uploader("上傳 CSV", type=["csv"])
+    rows = []
+    for sym in watchlist:
+        df = get_history(sym, "1y")
+        div, desc, mkt = get_asset_meta(sym)
+        if df.empty:
+            rows.append({"代碼": sym, "中文名稱": display_name(sym), "市場": mkt, "狀態": "無資料"})
+            continue
+        r = df.iloc[-1]
+        rows.append({
+            "代碼": sym,
+            "中文名稱": display_name(sym),
+            "市場": mkt,
+            "收盤價": round(float(r["Close"]), 2),
+            "日漲跌幅": f"{r['Close'].pct_change().iloc[-1]*100:+.2f}%" if len(r) > 1 else "—",
+            "股利政策": div,
+            "產業描述": desc,
+        })
+    snap_df = pd.DataFrame(rows)
+    if not snap_df.empty:
+        st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V3.0：全面支援全球股票智慧中文名稱解析與精準操盤。")
+st.caption("33 專業操盤系統 V3.5：結合美、日、韓、台全市場中文名稱解析、精準支撐壓力與短線當沖掃描。")
