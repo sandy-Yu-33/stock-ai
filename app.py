@@ -17,7 +17,7 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V9.0 專業量化交易雷達版",
+    page_title="33 專業操盤系統 V11.0 專業量化交易雷達版",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -135,12 +135,210 @@ def display_name(symbol):
         pass
     return f"{symbol} (專業資產)"
 
+
+@st.cache_data(ttl=900, show_spinner=False)
+def get_twse_daily_fundamental(symbol):
+    """TWSE 官方每日 P/E、殖利率、P/B。找不到資料時不填假數字。"""
+    code = normalize_symbol(symbol).split(".")[0]
+    if not re.fullmatch(r"\d{4}", code) or requests is None:
+        return None
+    for days_back in range(0, 11):
+        d = (datetime.now() - pd.Timedelta(days=days_back)).strftime("%Y%m%d")
+        try:
+            url = "https://www.twse.com.tw/rwd/zh/afterTrading/BWIBBU_d"
+            params = {"date": d, "selectType": "ALL", "response": "json"}
+            rr = requests.get(url, params=params, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+            if rr.status_code != 200:
+                continue
+            data = rr.json()
+            for table in data.get("tables", []):
+                fields, rows = table.get("fields", []), table.get("data", [])
+                if not fields or not rows:
+                    continue
+                code_idx = next((i for i, f in enumerate(fields) if "證券代號" in str(f)), None)
+                if code_idx is None:
+                    continue
+                for row in rows:
+                    if code_idx < len(row) and str(row[code_idx]).strip() == code:
+                        def find_value(words):
+                            for i, f in enumerate(fields):
+                                if any(w in str(f) for w in words) and i < len(row):
+                                    try:
+                                        s = str(row[i]).replace(",", "").strip()
+                                        if s not in ("", "--", "---", "nan", "None"):
+                                            return float(s)
+                                    except Exception:
+                                        pass
+                            return None
+                        return {
+                            "date": d,
+                            "pe": find_value(["本益比"]),
+                            "yield": find_value(["殖利率"]),
+                            "pb": find_value(["股價淨值比"]),
+                        }
+        except Exception:
+            continue
+    return None
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def get_yfinance_fundamentals(symbol):
+    """取得 yfinance 最近可用基本面；失敗時回傳 None。"""
+    try:
+        t = yf.Ticker(normalize_symbol(symbol))
+        info = t.info or {}
+        def num(*keys):
+            for k in keys:
+                v = info.get(k)
+                try:
+                    if v is not None and np.isfinite(float(v)):
+                        return float(v)
+                except Exception:
+                    pass
+            return None
+        return {
+            "eps": num("trailingEps", "epsTrailingTwelveMonths"),
+            "roe": num("returnOnEquity"),
+            "gross_margin": num("grossMargins"),
+            "op_margin": num("operatingMargins"),
+            "revenue_growth": num("revenueGrowth"),
+            "free_cash_flow": num("freeCashflow"),
+            "long_name": info.get("longName") or info.get("shortName"),
+        }
+    except Exception:
+        return None
+
+
+def _fmt_percent(v):
+    if v is None or not np.isfinite(v):
+        return "無資料"
+    return f"{v * 100:.2f}%"
+
+
+def _fmt_num(v, suffix=""):
+    if v is None or not np.isfinite(v):
+        return "無資料"
+    return f"{v:,.2f}{suffix}"
+
+
 def get_asset_meta(symbol):
     sym = normalize_symbol(symbol)
-    if sym in GLOBAL_ASSET_DATABASE:
-        d = GLOBAL_ASSET_DATABASE[sym]
-        return d["div"], d["desc"], d["market"], d["pe"], d["roe"], d["eps"], d["gross_margin"], d["op_margin"], d["revenue_yoy"]
-    return "依公告為準", "跨國金融資產", "全球市場", "20.0", "15.0%", "5.0元", "25.0%", "10.0%", "+10.0%"
+    base = GLOBAL_ASSET_DATABASE.get(sym, {})
+    div = base.get("div", "依公告為準")
+    desc = base.get("desc", "市場資料")
+    market = base.get("market", "全球市場")
+
+    yf_f = get_yfinance_fundamentals(sym)
+    twse_f = get_twse_daily_fundamental(sym)
+
+    pe = twse_f.get("pe") if twse_f else None
+    eps = yf_f.get("eps") if yf_f else None
+    if pe is None and eps and eps > 0:
+        try:
+            hist = get_history(sym, "5d")
+            if not hist.empty:
+                pe = float(hist["Close"].iloc[-1]) / eps
+        except Exception:
+            pass
+
+    return (
+        div, desc, market,
+        _fmt_num(pe),
+        _fmt_percent(yf_f.get("roe") if yf_f else None),
+        _fmt_num(eps, "元"),
+        _fmt_percent(yf_f.get("gross_margin") if yf_f else None),
+        _fmt_percent(yf_f.get("op_margin") if yf_f else None),
+        _fmt_percent(yf_f.get("revenue_growth") if yf_f else None),
+    )
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def get_twse_institutional(symbol):
+    """TWSE 官方三大法人買賣超，單位轉成張。"""
+    code = normalize_symbol(symbol).split(".")[0]
+    if not re.fullmatch(r"\d{4}", code) or requests is None:
+        return None
+    for days_back in range(0, 11):
+        d = (datetime.now() - pd.Timedelta(days=days_back)).strftime("%Y%m%d")
+        try:
+            url = "https://www.twse.com.tw/rwd/zh/fund/T86"
+            params = {"date": d, "selectType": "ALLBUT0999", "response": "json"}
+            rr = requests.get(url, params=params, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+            if rr.status_code != 200:
+                continue
+            data = rr.json()
+            for table in data.get("tables", []):
+                fields, rows = table.get("fields", []), table.get("data", [])
+                if not fields or not rows:
+                    continue
+                code_idx = next((i for i, f in enumerate(fields) if "證券代號" in str(f)), None)
+                if code_idx is None:
+                    continue
+                for row in rows:
+                    if code_idx < len(row) and str(row[code_idx]).strip() == code:
+                        def find_value(words):
+                            for i, f in enumerate(fields):
+                                if all(w in str(f) for w in words) and i < len(row):
+                                    try:
+                                        return float(str(row[i]).replace(",", "")) / 1000.0
+                                    except Exception:
+                                        pass
+                            return None
+                        return {
+                            "date": d,
+                            "外資買賣超": find_value(["外陸資買賣超股數"]),
+                            "投信買賣超": find_value(["投信買賣超股數"]),
+                            "自營商買賣超": find_value(["自營商買賣超股數"]),
+                            "三大法人合計": find_value(["三大法人買賣超股數"]),
+                        }
+        except Exception:
+            continue
+    return None
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def get_twse_margin(symbol):
+    """TWSE 官方個股融資融券餘額，單位轉成張。"""
+    code = normalize_symbol(symbol).split(".")[0]
+    if not re.fullmatch(r"\d{4}", code) or requests is None:
+        return None
+    for days_back in range(0, 11):
+        d = (datetime.now() - pd.Timedelta(days=days_back)).strftime("%Y%m%d")
+        try:
+            url = "https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN"
+            params = {"date": d, "selectType": "ALL", "response": "json"}
+            rr = requests.get(url, params=params, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+            if rr.status_code != 200:
+                continue
+            data = rr.json()
+            for table in data.get("tables", []):
+                fields, rows = table.get("fields", []), table.get("data", [])
+                if not fields or not rows:
+                    continue
+                code_idx = next((i for i, f in enumerate(fields) if "代號" in str(f)), None)
+                if code_idx is None:
+                    continue
+                for row in rows:
+                    if code_idx < len(row) and str(row[code_idx]).strip() == code:
+                        def find_value(words):
+                            for i, f in enumerate(fields):
+                                if all(w in str(f) for w in words) and i < len(row):
+                                    try:
+                                        return float(str(row[i]).replace(",", "")) / 1000.0
+                                    except Exception:
+                                        pass
+                            return None
+                        return {
+                            "date": d,
+                            "融資前日餘額": find_value(["融資", "前日餘額"]),
+                            "融資今日餘額": find_value(["融資", "今日餘額"]),
+                            "融券前日餘額": find_value(["融券", "前日餘額"]),
+                            "融券今日餘額": find_value(["融券", "今日餘額"]),
+                        }
+        except Exception:
+            continue
+    return None
+
 
 @st.cache_data(ttl=300, show_spinner=False)
 def get_history(symbol, period="2y", interval="1d"):
@@ -585,33 +783,42 @@ def calculate_overnight_score(df):
 # 籌碼與題材資料模擬（法人、融資融券、大戶與今日消息面）
 # -------------------------------------------------------------
 def get_institutional_chips(symbol):
-    """
-    不再捏造法人數字。
-    若沒有 TWSE/TPEX 即時資料，回傳「待取得」。
-    可在此接入官方 TWSE/TPEX API。
-    """
-    return {
-        "外資買賣超": "待取得官方資料",
-        "投信買賣超": "待取得官方資料",
-        "自營商買賣超": "待取得官方資料",
-        "三大法人合計": "待取得官方資料",
-        "融資變化": "待取得官方資料",
-        "融券變化": "待取得官方資料",
-        "大戶持股變化": "待取得官方資料",
+    inst = get_twse_institutional(symbol)
+    margin = get_twse_margin(symbol)
+    def lots(v):
+        return "無資料" if v is None else f"{v:+,.1f} 張"
+
+    out = {
+        "外資買賣超": lots(inst.get("外資買賣超")) if inst else "無資料",
+        "投信買賣超": lots(inst.get("投信買賣超")) if inst else "無資料",
+        "自營商買賣超": lots(inst.get("自營商買賣超")) if inst else "無資料",
+        "三大法人合計": lots(inst.get("三大法人合計")) if inst else "無資料",
+        "融資變化": "無資料",
+        "融券變化": "無資料",
+        "大戶持股變化": "需集保股權分散週資料",
+        "_date": inst.get("date") if inst else (margin.get("date") if margin else None),
     }
+    if margin:
+        fm, fp = margin.get("融資今日餘額"), margin.get("融資前日餘額")
+        sm, sp = margin.get("融券今日餘額"), margin.get("融券前日餘額")
+        if fm is not None and fp is not None:
+            out["融資變化"] = f"{fm-fp:+,.1f} 張"
+        if sm is not None and sp is not None:
+            out["融券變化"] = f"{sm-sp:+,.1f} 張"
+    return out
 
 
 def get_market_catalyst(symbol):
-    # 不產生虛構新聞；由新聞模組接入真實來源後填入。
     return [{
-        "category": "📰 最新消息",
-        "desc": "目前程式未接入即時新聞來源；請勿把預設文字視為真實新聞。"
+        "category": "📰 即時新聞",
+        "desc": "目前版本未連接新聞 API，因此不顯示未驗證新聞。"
     }]
+
 
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V9.0")
+st.sidebar.title("⚙️ 33 專業操盤系統 V11.0")
 page = st.sidebar.radio(
     "功能模組",
     [
@@ -677,7 +884,7 @@ if page == "🔍 全市場個股深度分析 (量化評分+雙支撐雙壓力)":
         ch3.metric("三大法人合計", chips["三大法人合計"])
         ch4.metric("大戶持股變化", chips["大戶持股變化"])
         
-        st.info(f"💡 **信用籌碼狀態**：融資變化 `{chips['融資變化']}` | 融券變化 `{chips['融券變化']}` (散戶與主力籌碼對比健康)")
+        st.info(f"💡 **信用籌碼狀態**：融資變化 `{chips['融資變化']}` | 融券變化 `{chips['融券變化']}` | 大戶持股：`{chips['大戶持股變化']}`")
 
         st.markdown("---")
 
@@ -724,7 +931,9 @@ if page == "🔍 全市場個股深度分析 (量化評分+雙支撐雙壓力)":
         f1.metric("營收年增率 (YoY)", rev_yoy)
         f2.metric("毛利率 (本業獲利)", gross_m)
         f3.metric("營業利益率 (營運能力)", op_m)
-        f4.metric("自由現金流狀態", "正向充沛 (現金流健康)")
+        yf_f = get_yfinance_fundamentals(target_symbol)
+        fcf = yf_f.get("free_cash_flow") if yf_f else None
+        f4.metric("自由現金流", "無資料" if fcf is None else f"{fcf:,.0f}")
 
         st.markdown("---")
 
