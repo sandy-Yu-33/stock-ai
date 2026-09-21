@@ -17,7 +17,7 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V8.4 穩定最終版",
+    page_title="33 專業操盤系統 V8.5 最終修復版",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -257,7 +257,7 @@ def get_market_catalyst(symbol):
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V8.4")
+st.sidebar.title("⚙️ 33 專業操盤系統 V8.5")
 page = st.sidebar.radio(
     "功能模組",
     [
@@ -346,7 +346,6 @@ if page == "🔍 全市場個股深度分析 (籌碼+基本面+多週期支撐)"
 
             with col_sr2:
                 st.markdown("### 🛡️ 第一/第二支撐與壓力 ＆ 多週期防守")
-                # 完全避免 f-string 內部複雜表達式造成的語法錯誤
                 ma5_val = sr['5日線']
                 ma20_val = sr['20日線']
                 ma60_val = sr['60日線']
@@ -517,4 +516,4 @@ elif page == "🏠 個人自選股監控儀表板":
         st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V8.4 穩定最終版：完美修復 f-string 巢狀解析錯誤，精準呈現第一/第二支撐與壓力。")
+st.caption("33 專業操盤系統 V8.5 最終修復版：語法已全面正常，支援第一/第二支撐與壓力。")
