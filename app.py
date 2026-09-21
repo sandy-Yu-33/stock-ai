@@ -18,8 +18,8 @@ except Exception:
     requests = None
 
 st.set_page_config(
-    page_title="33 專業操盤系統 V14.0 全功能實戰至尊版",
-    page_icon="⚡",
+    page_title="33 專業操盤系統 V15.0 企業全貌與全球題材版",
+    page_icon="🌍",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -54,24 +54,33 @@ st.markdown("""
     padding: 16px; border-radius: 10px; margin-bottom: 10px;
     border: 1px solid rgba(168, 85, 247, 0.3);
 }
+.news-card {
+    background: rgba(128, 128, 128, 0.05);
+    border: 1px solid rgba(128, 128, 128, 0.2);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+}
 .small-note {font-size: 0.82rem; opacity: .75;}
 </style>
 """, unsafe_allow_html=True)
 
 DEFAULT_WATCHLIST = [
-    "2330", "3711", "6669", "5274", "2317", "2454", "NVDA", "AAPL", "TSLA"
+    "2330", "3711", "6669", "5274", "2317", "2454", "NVDA", "AAPL", "TSLA", "7203.T", "005930.KS"
 ]
 
 GLOBAL_ASSET_DATABASE = {
-    "2330.TW": {"name": "台積電", "market": "台股上市", "desc": "全球晶圓代工龍頭，先進製程與CoWoS核心", "pe": "22.5", "roe": "28.5%", "eps": "39.2元"},
-    "3711.TW": {"name": "日月光投控", "market": "台股上市", "desc": "全球半導體封測龍頭", "pe": "16.8", "roe": "15.2%", "eps": "8.4元"},
-    "6669.TW": {"name": "緯穎", "market": "台股上市", "desc": "雲端資料中心與AI伺服器", "pe": "24.1", "roe": "35.8%", "eps": "85.4元"},
-    "2317.TW": {"name": "鴻海", "market": "台股上市", "desc": "全球電子代工巨頭", "pe": "14.2", "roe": "11.5%", "eps": "10.2元"},
-    "2454.TW": {"name": "聯發科", "market": "台股上市", "desc": "全球IC設計大廠", "pe": "18.5", "roe": "26.4%", "eps": "58.1元"},
-    "5274.TWO": {"name": "信驊", "market": "台股上櫃", "desc": "伺服器遠端管理晶片(BMC)", "pe": "45.2", "roe": "32.1%", "eps": "52.3元"},
-    "NVDA": {"name": "輝達 (NVIDIA)", "market": "美股", "desc": "AI運算與HPC晶片霸主", "pe": "48.5", "roe": "75.2%", "eps": "3.20美元"},
-    "AAPL": {"name": "蘋果 (Apple)", "market": "美股", "desc": "消費電子與服務生態系", "pe": "31.2", "roe": "145.0%", "eps": "6.50美元"},
-    "TSLA": {"name": "特斯拉 (Tesla)", "market": "美股", "desc": "電動車與能源儲存", "pe": "65.4", "roe": "18.2%", "eps": "2.40美元"},
+    "2330.TW": {"name": "台積電", "market": "台股上市", "desc": "全球晶圓代工龍頭，以先進製程（3奈米、2奈米）與CoWoS先進封裝技術獨步全球，掌握全球AI與HPC晶片命脈。", "pe": "22.5", "roe": "28.5%", "eps": "39.2元"},
+    "3711.TW": {"name": "日月光投控", "market": "台股上市", "desc": "全球半導體封測（OSAT）龍頭，提供晶片封裝、測試及材料服務，受惠於異質整合與先進封裝外包商機。", "pe": "16.8", "roe": "15.2%", "eps": "8.4元"},
+    "6669.TW": {"name": "緯穎", "market": "台股上市", "desc": "專注於雲端資料中心 IT 基礎架構與超大型雲端服務商（CSP）的 AI 伺服器主機板與機櫃解決方案供應商。", "pe": "24.1", "roe": "35.8%", "eps": "85.4元"},
+    "2317.TW": {"name": "鴻海", "market": "台股上市", "desc": "全球最大電子代工製造服務（EMS）企業，近年積極佈局 AI 伺服器、電動車（EV）及半導體三大核心領域。", "pe": "14.2", "roe": "11.5%", "eps": "10.2元"},
+    "2454.TW": {"name": "聯發科", "market": "台股上市", "desc": "全球前五大無晶圓廠IC設計大廠，產品涵蓋智慧型手機晶片、智慧家庭與車用/ASIC客製化晶片。", "pe": "18.5", "roe": "26.4%", "eps": "58.1元"},
+    "5274.TWO": {"name": "信驊", "market": "台股上櫃", "desc": "全球伺服器遠端管理晶片（BMC）絕對王者，市佔率超過七成，深度綁定全球各大雲端資料中心伺服器擴建潮。", "pe": "45.2", "roe": "32.1%", "eps": "52.3元"},
+    "NVDA": {"name": "輝達 (NVIDIA)", "market": "美股", "desc": "全球AI運算、繪圖晶片（GPU）與高效能運算（HPC）霸主，建立無人能敵的 CUDA 軟硬體 AI 生態系。", "pe": "48.5", "roe": "75.2%", "eps": "3.20美元"},
+    "AAPL": {"name": "蘋果 (Apple)", "market": "美股", "desc": "消費性電子與軟體服務生態系巨頭，涵蓋iPhone、Mac及高毛利的App Store與iCloud等訂閱服務。", "pe": "31.2", "roe": "145.0%", "eps": "6.50美元"},
+    "TSLA": {"name": "特斯拉 (Tesla)", "market": "美股", "desc": "全球電動車與能源儲存（Megapack）領導者，並積極推進全自動駕駛（FSD）與人形機器人技術。", "pe": "65.4", "roe": "18.2%", "eps": "2.40美元"},
+    "7203.T": {"name": "豐田汽車 (Toyota)", "market": "日股", "desc": "全球銷量第一的傳統汽車製造商，近年在油電混合車（HEV）與次世代固態電池研發上具備領先優勢。", "pe": "10.5", "roe": "14.2%", "eps": "280日圓"},
+    "005930.KS": {"name": "三星電子 (Samsung)", "market": "韓股", "desc": "全球記憶體（DRAM/NAND）與智慧型手機雙料霸主，同時擁有晶圓代工與面板顯示器完整垂直整合能力。", "pe": "15.4", "roe": "12.8%", "eps": "5200韓元"},
 }
 
 def normalize_symbol(s):
@@ -111,12 +120,18 @@ def display_name(symbol):
         pass
     return f"{symbol} (資產)"
 
+def get_asset_desc(symbol):
+    sym = normalize_symbol(symbol)
+    if sym in GLOBAL_ASSET_DATABASE:
+        return GLOBAL_ASSET_DATABASE[sym]["desc"]
+    return "全球金融資產與供應鏈指標，具備特定產業競爭優勢與市場需求支撐。"
+
 @st.cache_data(ttl=900, show_spinner=False)
 def get_twse_daily_fundamental(symbol):
     code = normalize_symbol(symbol).split(".")[0]
     if not re.fullmatch(r"\d{4}", code) or requests is None:
         return None
-    for days_back in range(0, 6):
+    for days_back in range(6):
         d = (datetime.now() - pd.Timedelta(days=days_back)).strftime("%Y%m%d")
         try:
             url = "https://www.twse.com.tw/rwd/zh/afterTrading/BWIBBU_d"
@@ -325,14 +340,14 @@ def calculate_support_resistance_and_rr(df):
 # -----------------------------
 # Sidebar 導航
 # -----------------------------
-st.sidebar.title("⚙️ 33 專業操盤系統 V14.0")
+st.sidebar.title("⚙️ 33 專業操盤系統 V15.0")
 page = st.sidebar.radio(
     "功能模組",
     [
-        "🔍 個股全方位深度解析 (法人籌碼+支撐壓力+RR值)",
+        "🔍 個股全方位深度解析 (企業業務+法人籌碼+支撐壓力)",
         "🕒 台股 13:00 隔日沖高勝率雷達",
         "⏰ 美國 04:00 極速當沖雷達",
-        "📰 跨國財經新聞與產業題材解析",
+        "📰 各國財經新聞與產業題材深度解析",
         "📊 自選股風險報酬監控儀表板",
     ],
 )
@@ -342,20 +357,20 @@ capital = st.sidebar.number_input("操盤資金水位", min_value=0.0, value=500
 
 st.sidebar.markdown("### 📋 自選股清單")
 watch_text = st.sidebar.text_area(
-    "輸入代號 (支援台美)",
+    "輸入代號 (支援台美日韓)",
     value=",".join(DEFAULT_WATCHLIST),
     height=100
 )
 watchlist = [s.strip() for s in re.split(r"[,\n\s]+", watch_text) if s.strip()]
 
 # -------------------------------------------------------------
-# Page 1: Single Stock Deep Analysis (籌碼 + 支撐壓力 + RR)
+# Page 1: Single Stock Deep Analysis
 # -----------------------------
-if page == "🔍 個股全方位深度解析 (法人籌碼+支撐壓力+RR值)":
+if page == "🔍 個股全方位深度解析 (企業業務+法人籌碼+支撐壓力)":
     st.title("🔍 專家級個股全方位深度解析")
-    st.markdown("老手箴言：結合**三大法人買賣超籌碼、多週期支撐防守區、以及風險報酬比（RR值 ≥ 1.5）**，拒絕盲目追高。")
+    st.markdown("老手箴言：**買股票前先搞懂它是做什麼的、法人買不買單、以及 RR 值安不安全**。")
     
-    manual_input = st.text_input("輸入代號（例: 2330, 6669, NVDA）", value="2330")
+    manual_input = st.text_input("輸入代號（例: 2330, 6669, NVDA, 7203.T）", value="2330")
     target_symbol = manual_input.strip() if manual_input else "2330"
 
     df = get_history(target_symbol, "1y")
@@ -365,11 +380,20 @@ if page == "🔍 個股全方位深度解析 (法人籌碼+支撐壓力+RR值)":
         x = add_indicators(df)
         r = x.iloc[-1]
         d_name = display_name(target_symbol)
+        d_desc = get_asset_desc(target_symbol)
         sr = calculate_support_resistance_and_rr(df)
         pe, roe, eps, gross_m, op_m, rev_yoy = get_asset_meta(target_symbol)
         inst = get_twse_institutional(target_symbol)
 
         st.markdown(f"## 📌 {d_name} (`{target_symbol}`) 實戰全景面板")
+        
+        # 企業業務說明卡片
+        st.markdown(f"""
+        <div class="fundamental-box">
+            <b>🏢 這間公司是做什麼的（核心業務與產業定位）</b><br>
+            <span>{d_desc}</span>
+        </div>
+        """, unsafe_allow_html=True)
 
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("最新收盤價", f"${r['Close']:,.2f}")
@@ -389,7 +413,7 @@ if page == "🔍 個股全方位深度解析 (法人籌碼+支撐壓力+RR值)":
             ic4.metric("三大法人合計", f"{inst['合計']:+,.1f} 張")
             st.caption(f"資料日期：{inst['date']}")
         else:
-            st.info("💡 該標的非台股上市或當日籌碼尚未更新（美股/海外資產不適用台股三法人欄位）。")
+            st.info("💡 該標的非台股上市或當日籌碼尚未更新（美股/日韓等海外資產不適用台股三法人欄位）。")
 
         st.markdown("---")
 
@@ -446,7 +470,6 @@ elif page == "🕒 台股 13:00 隔日沖高勝率雷達":
         df = get_history(sym, "6mo")
         if not df.empty:
             sr = calculate_support_resistance_and_rr(df)
-            r = df.iloc[-1]
             rows.append({
                 "代碼": sym,
                 "名稱": display_name(sym),
@@ -483,14 +506,31 @@ elif page == "⏰ 美國 04:00 極速當沖雷達":
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 # -------------------------------------------------------------
-# Page 4: News & Catalysts
+# Page 4: Global News & Catalysts
 # -----------------------------
-elif page == "📰 跨國財經新聞與產業題材解析":
-    st.title("📰 跨國財經新聞與產業題材解析")
+elif page == "📰 各國財經新聞與產業題材深度解析":
+    st.title("📰 各國財經新聞與跨國產業題材解析")
+    st.markdown("掌握全球主要資本市場（台、美、日、韓）最新產業趨勢與總經動脈。")
+
     st.markdown("""
-    <div class="fundamental-box">
-        <b>🔥 AI / HPC /先進封裝題材持續發酵</b><br>
-        全球 CSP 資本支出不減，供應鏈長線動能穩固。操盤手應當順勢而為，在拉回月線、季線且 RR 值漂亮的區間分批承接。
+    <div class="news-card">
+        <h3>🇹🇼 台灣股市：AI 伺服器與先進封裝供應鏈動能強勁</h3>
+        <p><b>核心解讀：</b>台積電先進製程與 CoWoS 產線持續滿載，結合緯穎、鴻海等伺服器廠出貨放量，外資與投信在權值股中交替主導行情。操盤手應緊盯法人動向與月線防守點，拉回即是分批佈局良機。</p>
+    </div>
+
+    <div class="news-card">
+        <h3>🇺🇸 美國股市：科技巨頭資本支出（Capex）與 AI 變現能力</h3>
+        <p><b>核心解讀：</b>輝達（NVDA）帶領的 AI 運算晶片需求依然是美股多頭火車頭。聯準會（Fed）利率政策牽動市場估值，當科技股面臨波動時，應嚴格依據 ATR 與支撐帶進行當沖或波段風控。</p>
+    </div>
+
+    <div class="news-card">
+        <h3>🇯🇵 日本股市：企業公司治理改革與半導體設備復甦</h3>
+        <p><b>核心解讀：</b>東京證交所持續推動企業改善股東權益報酬率（ROE），吸引外資長線進駐；同時日本本土積極扶植半導體製造與設備在地化（如熊本廠效應），豐田等車廠則在油電混合車市場保持強韌。</p>
+    </div>
+
+    <div class="news-card">
+        <h3>🇰🇷 韓國股市：高頻寬記憶體（HBM）與 AI 供應鏈競賽</h3>
+        <p><b>核心解讀：</b>三星電子與 SK 海力士在 HBM（高頻寬記憶體）技術上與輝達等 AI 晶片廠高度綁定。記憶體報價週期與外資進出為韓股短線波動的主要驅動力。</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -524,4 +564,4 @@ elif page == "📊 自選股風險報酬監控儀表板":
         st.dataframe(snap_df, use_container_width=True, hide_index=True)
 
 st.divider()
-st.caption("33 專業操盤系統 V14.0 全功能實戰至尊版：法人籌碼、多週期支撐壓力、當沖隔日沖與嚴格 RR 值風控全面到位。")
+st.caption("33 專業操盤系統 V15.0：企業核心業務解析、法人籌碼、多週期支撐壓力與各國財經新聞題材全面整合。")
